@@ -1,0 +1,142 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign In | Velocity Cutz</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=20260507-login-bg-fix">
+  <style>
+    /* Production-safe login background. Kept inline so the hosted page changes even if old CSS is cached. */
+   body.auth-premium-body {
+    min-height: 100dvh;
+    background:
+      linear-gradient(115deg, rgba(35, 27, 23, 0.16), rgba(35, 27, 23, 0.32)),
+      radial-gradient(circle at 82% 18%, rgba(184, 108, 63, 0.12), transparent 30%),
+      url("{% static 'img/login-background.jpg' %}?v=20260507"),
+      linear-gradient(135deg, #f3eadf 0%, #ead8c8 100%) !important;
+    background-size: cover, cover, cover, cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+  }
+
+  .auth-premium-brand--logo-only {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 1.25rem;
+    text-align: center;
+  }
+  .login-brand-clean {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.login-brand-clean-logo {
+  width: 190px;
+  max-width: 70%;
+  max-height: 90px;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+  </style>
+</head>
+<body class="auth-body auth-premium-body">
+  <main class="auth-premium-shell">
+    <section class="auth-premium-card">
+      <div class="login-brand-clean">
+       <img
+       src="{% static 'img/velocity-cutz-logo.png' %}?v=20260509-size-fix"
+       alt="Velocity Cutz"
+       class="login-brand-clean-logo"
+       >
+      </div>
+
+      {% if messages %}
+      <div class="messages">
+        {% for message in messages %}
+        <div class="message message-{{ message.tags|default:'info' }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <form method="post" class="auth-form auth-premium-form">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+        <div class="message message-error">
+          {% for error in form.non_field_errors %}
+          <div>{{ error }}</div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="field">
+          <label for="{{ form.username.id_for_label }}">Email or username</label>
+          {{ form.username }}
+          {% for error in form.username.errors %}
+          <small class="error">{{ error }}</small>
+          {% endfor %}
+        </div>
+
+        <div class="field">
+          <label for="{{ form.password.id_for_label }}">Password</label>
+          {{ form.password }}
+          {% for error in form.password.errors %}
+          <small class="error">{{ error }}</small>
+          {% endfor %}
+        </div>
+
+        <div class="auth-options-row">
+          <label class="checkbox-row" for="{{ form.remember_me.id_for_label }}">
+            {{ form.remember_me }}
+            <span>Remember me</span>
+          </label>
+          <a href="#forgot-password" data-prevent-nav data-toast="Password reset is not enabled yet.">Forgot password?</a>
+        </div>
+
+        {% if redirect_field_value %}
+        <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}">
+        {% endif %}
+
+        <button class="button button-primary auth-submit" type="submit">Sign In</button>
+      </form>
+
+      {% if not has_users %}
+      <div class="auth-help-card">
+        <strong>Initial setup needed</strong>
+        <p>Create your first admin account with <code>.venv/bin/python manage.py createsuperuser</code>.</p>
+      </div>
+      {% endif %}
+    </section>
+  </main>
+
+  <div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+  <script>
+  (function () {
+    function showToast(message) {
+      const stack = document.getElementById("toast-stack");
+      if (!stack || !message) return;
+      const toast = document.createElement("div");
+      toast.className = "toast";
+      toast.textContent = message;
+      stack.appendChild(toast);
+      window.setTimeout(function () { toast.classList.add("toast--visible"); }, 20);
+      window.setTimeout(function () {
+        toast.classList.remove("toast--visible");
+        window.setTimeout(function () { toast.remove(); }, 260);
+      }, 2600);
+    }
+
+    document.addEventListener("click", function (e) {
+      const target = e.target.closest("[data-toast]");
+      if (!target) return;
+      e.preventDefault();
+      showToast(target.dataset.toast);
+    });
+  })();
+  </script>
+</body>
+</html>

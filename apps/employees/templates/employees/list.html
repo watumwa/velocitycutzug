@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Employees{% endblock %}
+{% block page_title %}Employees{% endblock %}
+
+
+{% block extra_styles %}
+<style id="employee-staff-cards-critical-css">
+/* Production-safe employee cards: this keeps the staff directory professional even when old static CSS is cached. */
+.staff-directory-hero{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(320px,.75fr);gap:1.5rem;align-items:stretch;margin-bottom:1.25rem;padding:1.35rem;border-radius:24px;background:linear-gradient(135deg,#fff7ed 0%,#ffffff 45%,#f8fafc 100%);border:1px solid rgba(148,163,184,.24);box-shadow:0 18px 45px rgba(15,23,42,.07)}
+.staff-directory-copy h2{margin:.15rem 0 .45rem;font-size:1.55rem;line-height:1.1;color:#111827}.staff-directory-copy p:not(.eyebrow){margin:0;color:#64748b;max-width:760px}.staff-directory-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.8rem}.staff-directory-summary article{border-radius:18px;background:#fff;padding:1rem;border:1px solid rgba(226,232,240,.9);box-shadow:0 10px 25px rgba(15,23,42,.05)}.staff-directory-summary span{display:block;font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:#64748b;font-weight:800}.staff-directory-summary strong{display:block;margin-top:.3rem;font-size:1.65rem;color:#111827}.staff-filter-shell{padding:1rem;border-radius:22px;background:#fff;border:1px solid rgba(226,232,240,.9);box-shadow:0 12px 30px rgba(15,23,42,.05);margin-bottom:1.25rem}.staff-filter-grid{display:grid;grid-template-columns:minmax(260px,2fr) repeat(4,minmax(140px,1fr)) auto;gap:.8rem;align-items:end}.staff-filter-search{grid-column:auto}.staff-filter-actions{display:flex;gap:.5rem}.staff-role-pills{display:flex;flex-wrap:wrap;gap:.55rem;margin-top:.9rem}.staff-pill{display:inline-flex;align-items:center;justify-content:center;padding:.48rem .8rem;border-radius:999px;border:1px solid rgba(148,163,184,.28);background:#f8fafc;color:#334155;font-weight:800;text-decoration:none;font-size:.82rem}.staff-pill:hover,.staff-pill.is-active{background:#111827;color:#fff;border-color:#111827}.gentelella-contact-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1.15rem;align-items:stretch}.gentelella-staff-card{position:relative;overflow:hidden;border-radius:24px;background:#fff;border:1px solid rgba(226,232,240,.95);box-shadow:0 18px 44px rgba(15,23,42,.08);display:flex;flex-direction:column;min-height:100%;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}.gentelella-staff-card:hover{transform:translateY(-4px);box-shadow:0 24px 58px rgba(15,23,42,.13);border-color:rgba(184,108,63,.35)}.gentelella-staff-card[hidden]{display:none!important}.gentelella-card-topline{height:78px;background:linear-gradient(135deg,#b86c3f,#111827)}.gentelella-card-body{padding:0 1.1rem 1rem;flex:1}.gentelella-profile-row{display:grid;grid-template-columns:86px minmax(0,1fr);gap:.9rem;margin-top:-42px;align-items:end}.gentelella-avatar{width:86px;height:86px;border-radius:22px;border:5px solid #fff;background:#f8fafc;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 14px 30px rgba(15,23,42,.16);text-decoration:none}.gentelella-avatar img{width:100%;height:100%;object-fit:cover}.gentelella-avatar span{font-size:2rem;font-weight:900;color:#b86c3f}.gentelella-profile-text{min-width:0;padding-bottom:.2rem}.gentelella-card-status-row{display:flex;gap:.35rem;flex-wrap:wrap;margin-bottom:.45rem}.gentelella-profile-text h2{margin:0;font-size:1.05rem;line-height:1.2}.gentelella-profile-text h2 a{color:#111827;text-decoration:none}.gentelella-profile-text p{margin:.25rem 0;color:#64748b;font-weight:800}.gentelella-dept{display:inline-flex;padding:.32rem .58rem;border-radius:999px;background:#fff7ed;color:#9a5a34;font-size:.75rem;font-weight:900}.gentelella-contact-list{list-style:none;margin:1rem 0 0;padding:0;display:grid;gap:.55rem}.gentelella-contact-list li{display:grid;grid-template-columns:28px 78px minmax(0,1fr);gap:.5rem;align-items:center;padding:.55rem;border-radius:14px;background:#f8fafc;border:1px solid rgba(226,232,240,.8)}.gentelella-icon{width:28px;height:28px;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:center}.gentelella-contact-list strong{font-size:.74rem;text-transform:uppercase;letter-spacing:.06em;color:#64748b}.gentelella-contact-list em{font-style:normal;color:#111827;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.gentelella-stats-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.5rem;margin-top:1rem}.gentelella-stats-row div{border-radius:15px;background:#111827;color:#fff;padding:.7rem;text-align:center}.gentelella-stats-row span{display:block;font-size:.66rem;text-transform:uppercase;letter-spacing:.06em;color:rgba(255,255,255,.65)}.gentelella-stats-row strong{display:block;margin-top:.22rem;font-size:.82rem}.gentelella-services-preview{display:flex;flex-wrap:wrap;gap:.38rem;margin-top:.9rem}.gentelella-services-preview span{display:inline-flex;padding:.32rem .55rem;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:.74rem;font-weight:800}.gentelella-card-footer{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-top:1px solid rgba(226,232,240,.9);margin-top:auto}.gentelella-footer-link{display:flex;align-items:center;justify-content:center;padding:.85rem .7rem;font-weight:900;text-decoration:none;color:#334155;background:#fff}.gentelella-footer-link+.gentelella-footer-link{border-left:1px solid rgba(226,232,240,.9)}.gentelella-footer-link.primary{color:#b86c3f}.gentelella-footer-link:hover{background:#f8fafc}.badge{display:inline-flex;align-items:center;border-radius:999px;padding:.22rem .48rem;font-size:.68rem;font-weight:900;text-transform:uppercase;letter-spacing:.05em}.badge-success{background:#dcfce7;color:#166534}.badge-danger{background:#fee2e2;color:#991b1b}.badge-muted{background:#e5e7eb;color:#374151}@media(max-width:1250px){.gentelella-contact-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.staff-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.staff-filter-search,.staff-filter-actions{grid-column:1/-1}}@media(max-width:760px){.staff-directory-hero,.staff-directory-summary,.gentelella-contact-grid{grid-template-columns:1fr}.gentelella-profile-row{grid-template-columns:74px minmax(0,1fr)}.gentelella-avatar{width:74px;height:74px}.gentelella-contact-list li{grid-template-columns:28px minmax(0,1fr)}.gentelella-contact-list strong{display:none}.gentelella-stats-row{grid-template-columns:1fr}}
+</style>
+{% endblock %}
+
+{% block actions %}
+<a class="button button-primary" data-modal-url="{% url 'employees:create' %}" href="{% url 'employees:create' %}">Add Employee</a>
+{% endblock %}
+
+{% block content %}
+<section class="staff-directory-hero panel">
+  <div class="staff-directory-copy">
+    <p class="eyebrow">Staff Contacts</p>
+    <h2>Staff directory</h2>
+    <p>Use this page to manage employee profiles, service access, departments, login accounts, and commission performance.</p>
+  </div>
+  <div class="staff-directory-summary">
+    <article>
+      <span>Total Staff</span>
+      <strong>{{ summary.total }}</strong>
+    </article>
+    <article>
+      <span>Active</span>
+      <strong>{{ summary.active }}</strong>
+    </article>
+    <article>
+      <span>Departments</span>
+      <strong>{{ summary.departments }}</strong>
+    </article>
+    <article>
+      <span>Password Change</span>
+      <strong>{{ summary.must_change_password }}</strong>
+    </article>
+  </div>
+</section>
+
+<section class="staff-filter-shell panel">
+  <form method="get" class="staff-filter-grid">
+    <div class="field staff-filter-search">
+      <label for="id_q">Fast Search</label>
+      <input id="id_q" name="q" type="search" value="{{ filters.q }}" placeholder="Search name, phone, ID, username, role, department, service..." data-employee-card-search autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="id_role">Role</label>
+      <select id="id_role" name="role">
+        <option value="">All roles</option>
+        {% for role in roles %}
+        <option value="{{ role.id }}" {% if filters.role == role.id|stringformat:'s' %}selected{% endif %}>{{ role.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="id_department">Department</label>
+      <select id="id_department" name="department">
+        <option value="">All departments</option>
+        {% for department in departments %}
+        <option value="{{ department.id }}" {% if filters.department == department.id|stringformat:'s' %}selected{% endif %}>{{ department.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="id_id_type">ID Type</label>
+      <select id="id_id_type" name="id_type">
+        <option value="">All IDs</option>
+        {% for value,label in id_type_choices %}
+        <option value="{{ value }}" {% if filters.id_type == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="id_status">Status</label>
+      <select id="id_status" name="status">
+        <option value="">All status</option>
+        <option value="active" {% if filters.status == "active" %}selected{% endif %}>Active</option>
+        <option value="inactive" {% if filters.status == "inactive" %}selected{% endif %}>Inactive</option>
+        <option value="password" {% if filters.status == "password" %}selected{% endif %}>Must change password</option>
+      </select>
+    </div>
+    <div class="staff-filter-actions">
+      <button class="button button-primary" type="submit">Apply</button>
+      <a class="button button-secondary" href="{% url 'employees:list' %}">Reset</a>
+    </div>
+  </form>
+
+  <div class="staff-role-pills" aria-label="Quick filters">
+    <a class="staff-pill {% if not filters.role and not filters.status %}is-active{% endif %}" href="{% url 'employees:list' %}">All</a>
+    {% for role in roles %}
+    <a class="staff-pill {% if filters.role == role.id|stringformat:'s' %}is-active{% endif %}" href="?role={{ role.id }}{% if filters.q %}&q={{ filters.q|urlencode }}{% endif %}{% if filters.department %}&department={{ filters.department }}{% endif %}{% if filters.id_type %}&id_type={{ filters.id_type }}{% endif %}{% if filters.status %}&status={{ filters.status }}{% endif %}">{{ role.name }}</a>
+    {% endfor %}
+    <a class="staff-pill {% if filters.status == 'active' %}is-active{% endif %}" href="?status=active{% if filters.q %}&q={{ filters.q|urlencode }}{% endif %}{% if filters.role %}&role={{ filters.role }}{% endif %}{% if filters.department %}&department={{ filters.department }}{% endif %}{% if filters.id_type %}&id_type={{ filters.id_type }}{% endif %}">Active</a>
+    <a class="staff-pill {% if filters.status == 'password' %}is-active{% endif %}" href="?status=password{% if filters.q %}&q={{ filters.q|urlencode }}{% endif %}{% if filters.role %}&role={{ filters.role }}{% endif %}{% if filters.department %}&department={{ filters.department }}{% endif %}{% if filters.id_type %}&id_type={{ filters.id_type }}{% endif %}">Password Needed</a>
+  </div>
+</section>
+
+<section class="gentelella-contact-grid" aria-label="Staff details cards">
+  {% for employee in employees %}
+  <article class="gentelella-staff-card" data-employee-card>
+    <div class="gentelella-card-topline"></div>
+    <div class="gentelella-card-body">
+      <div class="gentelella-profile-row">
+        <a class="gentelella-avatar" href="{% url 'employees:detail' employee.pk %}" aria-label="View {{ employee.name }} profile">
+          {% if employee.photo %}
+          <img src="{{ employee.photo.url }}" alt="{{ employee.name }}">
+          {% else %}
+          <span>{{ employee.name|slice:":1"|upper }}</span>
+          {% endif %}
+        </a>
+        <div class="gentelella-profile-text">
+          <div class="gentelella-card-status-row">
+            {% if employee.is_active %}<span class="badge badge-success">Active</span>{% else %}<span class="badge badge-muted">Inactive</span>{% endif %}
+            {% if employee.must_change_password %}<span class="badge badge-danger">Password</span>{% endif %}
+          </div>
+          <h2><a href="{% url 'employees:detail' employee.pk %}">{{ employee.name }}</a></h2>
+          <p>{{ employee.role.name|default:"Employee" }}</p>
+          {% if employee.department %}<span class="gentelella-dept">{{ employee.department.name }}</span>{% endif %}
+        </div>
+      </div>
+
+      <ul class="gentelella-contact-list">
+        <li><span class="gentelella-icon">☎</span><strong>Phone</strong><em>{{ employee.phone|default:"Not added" }}</em></li>
+        <li><span class="gentelella-icon">👤</span><strong>Username</strong><em>{{ employee.user.username|default:"No account" }}</em></li>
+        <li><span class="gentelella-icon">🪪</span><strong>ID</strong><em>{{ employee.identification_display }}</em></li>
+        <li><span class="gentelella-icon">✂</span><strong>Services</strong><em>{{ employee.assigned_service_count }} assigned</em></li>
+      </ul>
+
+      <div class="gentelella-stats-row">
+        <div><span>Month Sales</span><strong>UGX {{ employee.month_sales|floatformat:0|intcomma }}</strong></div>
+        <div><span>Commission</span><strong>UGX {{ employee.month_commission|floatformat:0|intcomma }}</strong></div>
+        <div><span>Jobs</span><strong>{{ employee.month_jobs }}</strong></div>
+      </div>
+
+      <div class="gentelella-services-preview">
+        {% for service in employee.preview_services %}
+        <span>{{ service.name }}</span>
+        {% empty %}
+        <span>No services assigned</span>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="gentelella-card-footer">
+      <a class="gentelella-footer-link primary" href="{% url 'employees:detail' employee.pk %}">View Profile</a>
+      <a class="gentelella-footer-link" data-modal-url="{% url 'employees:edit' employee.pk %}" href="{% url 'employees:edit' employee.pk %}">Edit Details</a>
+    </div>
+  </article>
+  {% empty %}
+  <article class="panel employee-empty-card">
+    <h2>No employees found</h2>
+    <p class="empty-state">Try clearing the filters or add your first employee.</p>
+    <a class="button button-primary" data-modal-url="{% url 'employees:create' %}" href="{% url 'employees:create' %}">Add Employee</a>
+  </article>
+  {% endfor %}
+</section>
+
+{% if page_obj.has_other_pages %}
+<div class="pagination">
+  {% if page_obj.has_previous %}<a class="button button-secondary" href="?page={{ page_obj.previous_page_number }}&q={{ filters.q|urlencode }}&role={{ filters.role }}&department={{ filters.department }}&status={{ filters.status }}&id_type={{ filters.id_type }}">← Prev</a>{% endif %}
+  <span class="pagination-info">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+  {% if page_obj.has_next %}<a class="button button-secondary" href="?page={{ page_obj.next_page_number }}&q={{ filters.q|urlencode }}&role={{ filters.role }}&department={{ filters.department }}&status={{ filters.status }}&id_type={{ filters.id_type }}">Next →</a>{% endif %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  const input = document.querySelector('[data-employee-card-search]');
+  const cards = Array.from(document.querySelectorAll('[data-employee-card]'));
+  if (!input || !cards.length) return;
+  input.addEventListener('input', function () {
+    const term = input.value.trim().toLowerCase();
+    cards.forEach(function (card) {
+      card.hidden = term && !card.textContent.toLowerCase().includes(term);
+    });
+  });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Customers{% endblock %}
+{% block page_title %}Customers{% endblock %}
+
+{% block actions %}
+<a class="button button-primary" data-modal-url="{% url 'customers:create' %}" href="{% url 'customers:create' %}">Add Customer</a>
+{% endblock %}
+
+{% block content %}
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <h2>Customer Directory</h2>
+      <p>{{ page_obj.paginator.count }} customer{{ page_obj.paginator.count|pluralize }} registered.</p>
+    </div>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Phone</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for customer in customers %}
+        <tr>
+          <td data-label="Name">{{ customer.name|default:"Walk-in" }}</td>
+          <td data-label="Phone">{{ customer.phone|default:"-" }}</td>
+          <td data-label="Actions" class="row-actions">
+            <a class="text-link" href="{% url 'customers:history' customer.pk %}">History</a>
+            <a class="text-link" data-modal-url="{% url 'customers:edit' customer.pk %}" href="{% url 'customers:edit' customer.pk %}">Edit</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="3">No customers saved yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if page_obj.has_other_pages %}
+  <div class="pagination">
+    {% if page_obj.has_previous %}<a class="button button-secondary" href="?page={{ page_obj.previous_page_number }}">← Prev</a>{% endif %}
+    <span class="pagination-info">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}<a class="button button-secondary" href="?page={{ page_obj.next_page_number }}">Next →</a>{% endif %}
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

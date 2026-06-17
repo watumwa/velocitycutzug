@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Product Sales{% endblock %}
+{% block page_title %}Product Sales{% endblock %}
+
+{% block actions %}
+<a class="button button-secondary" href="{% url 'inventory:list' %}">Inventory</a>
+<a class="button button-primary" data-modal-url="{% url 'inventory:product_sale_create' %}" href="{% url 'inventory:product_sale_create' %}">Sell Product</a>
+{% endblock %}
+
+{% block content %}
+<section class="stats-grid">
+  <article class="stat-card accent-green">
+    <span class="stat-label">Filtered Product Revenue</span>
+    <strong>UGX {{ period_total|floatformat:0|intcomma }}</strong>
+    <small>{{ page_obj.paginator.count }} sale{{ page_obj.paginator.count|pluralize }}</small>
+  </article>
+  <article class="stat-card">
+    <span class="stat-label">Cash Product Sales</span>
+    <strong>UGX {{ cash_total|floatformat:0|intcomma }}</strong>
+  </article>
+  <article class="stat-card accent-blue">
+    <span class="stat-label">Mobile Money Product Sales</span>
+    <strong>UGX {{ mobile_money_total|floatformat:0|intcomma }}</strong>
+  </article>
+</section>
+
+<section class="panel form-panel">
+  <form method="get" class="inline-form inline-form-wide">
+    <div class="field compact">
+      <label for="id_q">Fast Search</label>
+      <input id="id_q" name="q" type="search" value="{{ filter_q }}" placeholder="Search product, customer, note...">
+    </div>
+    <div class="field compact">
+      <label for="id_start_date">Start Date</label>
+      <input id="id_start_date" name="start_date" type="date" value="{{ start_date }}">
+    </div>
+    <div class="field compact">
+      <label for="id_end_date">End Date</label>
+      <input id="id_end_date" name="end_date" type="date" value="{{ end_date }}">
+    </div>
+    <div class="field compact">
+      <label for="id_payment_method">Payment</label>
+      <select id="id_payment_method" name="payment_method">
+        <option value="">All payments</option>
+        {% for value,label in payment_method_choices %}
+        <option value="{{ value }}" {% if filter_payment_method == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-actions">
+      <button class="button button-primary" type="submit">Apply</button>
+      <a class="button button-secondary" href="{% url 'inventory:product_sales' %}">Reset</a>
+    </div>
+  </form>
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <p class="eyebrow">Retail Sales</p>
+      <h2>Products sold to customers</h2>
+      <p>Every product sale reduces stock and adds product revenue to dashboard/daily reports.</p>
+    </div>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Product</th>
+          <th>Customer</th>
+          <th>Qty</th>
+          <th>Unit Price</th>
+          <th>Total</th>
+          <th>Payment</th>
+          <th>Sold By</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for sale in product_sales %}
+        <tr>
+          <td data-label="Date">{{ sale.sale_date|date:"d M Y" }}</td>
+          <td data-label="Product"><strong>{{ sale.product.name }}</strong></td>
+          <td data-label="Customer">{{ sale.customer|default:"Walk-in" }}</td>
+          <td data-label="Qty">{{ sale.quantity }}</td>
+          <td data-label="Unit Price">UGX {{ sale.unit_price|floatformat:0|intcomma }}</td>
+          <td data-label="Total"><strong>UGX {{ sale.total_amount|floatformat:0|intcomma }}</strong></td>
+          <td data-label="Payment">{{ sale.get_payment_method_display }}</td>
+          <td data-label="Sold By">{{ sale.sold_by.get_full_name|default:sale.sold_by.username|default:"-" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8">No product sales found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if page_obj.has_other_pages %}
+  <div class="pagination">
+    {% if page_obj.has_previous %}<a class="button button-secondary" href="?page={{ page_obj.previous_page_number }}&q={{ filter_q }}&start_date={{ start_date }}&end_date={{ end_date }}&payment_method={{ filter_payment_method }}">← Prev</a>{% endif %}
+    <span class="pagination-info">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}<a class="button button-secondary" href="?page={{ page_obj.next_page_number }}&q={{ filter_q }}&start_date={{ start_date }}&end_date={{ end_date }}&payment_method={{ filter_payment_method }}">Next →</a>{% endif %}
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

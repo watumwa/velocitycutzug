@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}{% if is_employee_view %}My Service Submissions{% else %}Sales{% endif %}{% endblock %}
+{% block page_title %}{% if is_employee_view %}My Service Submissions{% else %}Sales & Approvals{% endif %}{% endblock %}
+
+{% block actions %}
+<a class="button button-primary" data-modal-url="{% url 'sales:create' %}" href="{% url 'sales:create' %}">{% if is_employee_view %}Submit Service{% else %}New Sale{% endif %}</a>
+{% endblock %}
+
+{% block content %}
+<section class="stats-grid">
+  <article class="stat-card">
+    <span class="stat-label">Today Approved Revenue</span>
+    <strong>UGX {{ today_total|floatformat:0|intcomma }}</strong>
+  </article>
+  <article class="stat-card">
+    <span class="stat-label">Today Approved Commission</span>
+    <strong>UGX {{ today_commission|floatformat:0|intcomma }}</strong>
+    <small>Main + support commission</small>
+  </article>
+  <article class="stat-card accent-green">
+    <span class="stat-label">Today Cash</span>
+    <strong>UGX {{ today_cash|floatformat:0|intcomma }}</strong>
+  </article>
+  <article class="stat-card accent-blue">
+    <span class="stat-label">Today Mobile Money</span>
+    <strong>UGX {{ today_mobile_money|floatformat:0|intcomma }}</strong>
+  </article>
+  <article class="stat-card accent-blue">
+    <span class="stat-label">Pending Approval</span>
+    <strong>{{ pending_count }}</strong>
+  </article>
+</section>
+
+<section class="panel form-panel">
+  <form method="get" class="inline-form inline-form-wide">
+    <div class="field compact">
+      <label for="id_filter_date">Date</label>
+      <input id="id_filter_date" name="date" type="date" value="{{ filter_date }}">
+      <div class="date-shortcuts">
+        <button type="button" class="shortcut-btn" data-target="id_filter_date" data-offset="0">Today</button>
+        <button type="button" class="shortcut-btn" data-target="id_filter_date" data-offset="-1">Yesterday</button>
+      </div>
+    </div>
+    {% if can_manage_sales %}
+    <div class="field compact">
+      <label for="id_filter_status">Status</label>
+      <select id="id_filter_status" name="status">
+        <option value="">All statuses</option>
+        {% for value,label in status_choices %}
+        <option value="{{ value }}" {% if filter_status == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field compact">
+      <label for="id_filter_payment_method">Payment</label>
+      <select id="id_filter_payment_method" name="payment_method">
+        <option value="">All payments</option>
+        {% for value,label in payment_method_choices %}
+        <option value="{{ value }}" {% if filter_payment_method == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field compact">
+      <label for="id_filter_employee">Main Employee</label>
+      <select id="id_filter_employee" name="employee">
+        <option value="">All employees</option>
+        {% for emp in employees %}
+        <option value="{{ emp.pk }}" {% if filter_employee == emp.pk|stringformat:"s" %}selected{% endif %}>{{ emp.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% endif %}
+    <div class="form-actions">
+      <button class="button button-primary" type="submit">Filter</button>
+      <a class="button button-secondary" href="{% url 'sales:list' %}">Clear</a>
+    </div>
+  </form>
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <h2>{% if is_employee_view %}My Submitted Services{% else %}Transactions{% endif %}</h2>
+      <p>{{ page_obj.paginator.count }} record{{ page_obj.paginator.count|pluralize }} found. Only approved records count in revenue and commission totals.</p>
+    </div>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Employees</th>
+          <th>Service</th>
+          <th>Customer</th>
+          <th>Payment</th>
+          <th>Amount</th>
+          <th>Commission</th>
+          <th>Status</th>
+          {% if can_manage_sales %}<th></th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for sale in sales %}
+        <tr class="{% if sale.status == 'pending' %}sale-row-pending{% endif %}">
+          <td data-label="Time">{{ sale.created_at|date:"d M Y H:i" }}</td>
+          <td data-label="Employees">
+            {{ sale.employee_summary }}
+            {% for item in sale.sale_items %}
+              {% if item.support_employee %}
+              <br><small class="field-note">Support: {{ item.support_employee.name }} — UGX {{ item.support_commission_amount|floatformat:0|intcomma }}</small>
+              {% endif %}
+            {% endfor %}
+          </td>
+          <td data-label="Services">
+            {{ sale.service_summary }}
+            {% if sale.item_count > 1 %}<br><small class="field-note">{{ sale.item_count }} services</small>{% endif %}
+          </td>
+          <td data-label="Customer">{{ sale.customer|default:"Walk-in" }}</td>
+          <td data-label="Payment">{{ sale.get_payment_method_display }}</td>
+          <td data-label="Amount">UGX {{ sale.amount|floatformat:0|intcomma }}</td>
+          <td data-label="Commission">
+            UGX {{ sale.commission_amount|floatformat:0|intcomma }}
+            {% if sale.support_commission_amount %}<br><small class="field-note">Support UGX {{ sale.support_commission_amount|floatformat:0|intcomma }}</small>{% endif %}
+          </td>
+          <td data-label="Status">
+            {% if sale.status == "approved" %}
+              <span class="badge badge-success">Approved</span>
+            {% elif sale.status == "pending" %}
+              <span class="badge badge-muted">Pending</span>
+            {% elif sale.status == "rejected" %}
+              <span class="badge badge-danger">Rejected</span>
+            {% else %}
+              <span class="badge badge-muted">{{ sale.get_status_display }}</span>
+            {% endif %}
+          </td>
+          {% if can_manage_sales %}
+          <td data-label="Actions" class="row-actions">
+            {% if sale.status == "pending" %}
+            <form method="post" action="{% url 'sales:approve' sale.pk %}" class="approval-inline-form" style="display:grid;gap:0.4rem;min-width:210px;">
+              {% csrf_token %}
+              <select name="payment_method" aria-label="Payment method">
+                {% for value,label in payment_method_choices %}
+                <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+              {% for item in sale.sale_items %}
+                {% if item.service.support_commission_enabled %}
+                <label style="display:grid;gap:0.2rem;">
+                  <small class="field-note">Support for {{ item.service.name }} — UGX {{ item.service.support_commission_amount|floatformat:0|intcomma }}</small>
+                  <select name="support_employee_for_item_{{ item.pk }}">
+                    <option value="">No support employee</option>
+                    {% for emp in employees %}
+                    <option value="{{ emp.pk }}" {% if item.support_employee_id == emp.pk %}selected{% endif %}>{{ emp.name }}</option>
+                    {% endfor %}
+                  </select>
+                </label>
+                {% endif %}
+              {% endfor %}
+              <button class="text-link" type="submit">Approve</button>
+            </form>
+            <form method="post" action="{% url 'sales:reject' sale.pk %}" style="display:inline;">
+              {% csrf_token %}
+              <button class="text-link text-danger" type="submit">Reject</button>
+            </form>
+            {% endif %}
+            <a class="text-link" data-modal-url="{% url 'sales:edit' sale.pk %}" href="{% url 'sales:edit' sale.pk %}">Edit</a>
+            <a class="text-link text-danger" data-modal-url="{% url 'sales:delete' sale.pk %}" href="{% url 'sales:delete' sale.pk %}">Cancel</a>
+          </td>
+          {% endif %}
+        </tr>
+        {% empty %}
+        <tr><td colspan="{% if can_manage_sales %}9{% else %}8{% endif %}">No sales found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if page_obj.has_other_pages %}
+  <div class="pagination">
+    {% if page_obj.has_previous %}
+    <a class="button button-secondary" href="?{% if filter_date %}date={{ filter_date }}&{% endif %}{% if filter_status %}status={{ filter_status }}&{% endif %}{% if filter_payment_method %}payment_method={{ filter_payment_method }}&{% endif %}{% if filter_employee %}employee={{ filter_employee }}&{% endif %}page={{ page_obj.previous_page_number }}">← Prev</a>
+    {% endif %}
+    <span class="pagination-info">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+    <a class="button button-secondary" href="?{% if filter_date %}date={{ filter_date }}&{% endif %}{% if filter_status %}status={{ filter_status }}&{% endif %}{% if filter_payment_method %}payment_method={{ filter_payment_method }}&{% endif %}{% if filter_employee %}employee={{ filter_employee }}&{% endif %}page={{ page_obj.next_page_number }}">Next →</a>
+    {% endif %}
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

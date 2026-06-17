@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Employee Report{% endblock %}
+{% block page_title %}Employee Report{% endblock %}
+
+{% block actions %}
+<a class="button button-secondary" href="?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}&export=csv">Export CSV</a>
+{% endblock %}
+
+{% block content %}
+
+<section class="panel form-panel">
+  <form method="get" class="inline-form inline-form-wide">
+    <div class="field compact">
+      <label for="id_start_date">Start Date</label>
+      <input id="id_start_date" name="start_date" type="date" value="{{ start_date|date:'Y-m-d' }}">
+      <div class="date-shortcuts">
+        <button type="button" class="shortcut-btn" data-target="id_start_date" data-offset="0">Today</button>
+        <button type="button" class="shortcut-btn" data-target="id_start_date" data-offset="-1">Yesterday</button>
+      </div>
+    </div>
+    <div class="field compact">
+      <label for="id_end_date">End Date</label>
+      <input id="id_end_date" name="end_date" type="date" value="{{ end_date|date:'Y-m-d' }}">
+      <div class="date-shortcuts">
+        <button type="button" class="shortcut-btn" data-target="id_end_date" data-offset="0">Today</button>
+        <button type="button" class="shortcut-btn" data-target="id_end_date" data-offset="-1">Yesterday</button>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="button button-primary" type="submit">Apply</button>
+    </div>
+  </form>
+</section>
+
+{% if rows %}
+
+{# ── Summary KPI strip ── #}
+<section class="stats-grid">
+  {% for row in rows %}
+  <article class="stat-card">
+    <span class="stat-label">{{ row.employee_name }}</span>
+    <strong>UGX {{ row.total_sales|floatformat:0|intcomma }}</strong>
+    <small>{{ row.total_jobs }} jobs · UGX {{ row.total_commission|floatformat:0|intcomma }} commission</small>
+  </article>
+  {% endfor %}
+</section>
+
+{# ── Charts row ── #}
+<div class="two-column">
+
+  {# Bar chart: revenue vs commission per employee #}
+  <article class="panel">
+    <div class="panel-header">
+      <div>
+        <p class="eyebrow">Revenue vs Commission</p>
+        <h2>Earnings Comparison</h2>
+      </div>
+    </div>
+    <canvas id="chart-earnings" height="220"></canvas>
+  </article>
+
+  {# Pie chart: revenue share per employee #}
+  <article class="panel">
+    <div class="panel-header">
+      <div>
+        <p class="eyebrow">Revenue Share</p>
+        <h2>Employee Split</h2>
+      </div>
+    </div>
+    <canvas id="chart-split" height="220"></canvas>
+  </article>
+
+</div>
+
+{# ── Per-employee cards ── #}
+<section class="employee-report-grid">
+  {% for row in rows %}
+  <article class="employee-report-card">
+    <div class="employee-report-header">
+      <div>
+        <p class="eyebrow">Employee</p>
+        <h3>{{ row.employee_name }}</h3>
+      </div>
+      <span class="badge badge-muted">{{ row.total_jobs }} jobs</span>
+    </div>
+
+    <div class="employee-report-metrics">
+      <div class="employee-report-metric">
+        <span>Revenue</span>
+        <strong>UGX {{ row.total_sales|floatformat:0|intcomma }}</strong>
+      </div>
+      <div class="employee-report-metric">
+        <span>Commission</span>
+        <strong>UGX {{ row.total_commission|floatformat:0|intcomma }}</strong>
+        <small>Main UGX {{ row.main_commission|floatformat:0|intcomma }} · Support UGX {{ row.support_commission|floatformat:0|intcomma }}</small>
+      </div>
+      <div class="employee-report-metric">
+        <span>Net (after commission)</span>
+        <strong>UGX {{ row.net_revenue|floatformat:0|intcomma }}</strong>
+      </div>
+    </div>
+
+    {# Mini bar chart per employee: revenue by service #}
+    <canvas id="chart-emp-{{ forloop.counter }}" height="120"
+            data-labels='[{% for s in row.service_breakdown %}"{{ s.service_name|escapejs }}"{% if not forloop.last %},{% endif %}{% endfor %}]'
+            data-revenue='[{% for s in row.service_breakdown %}{{ s.total_revenue|floatformat:0 }}{% if not forloop.last %},{% endif %}{% endfor %}]'
+            data-commission='[{% for s in row.service_breakdown %}{{ s.total_commission|floatformat:0 }}{% if not forloop.last %},{% endif %}{% endfor %}]'>
+    </canvas>
+
+    <details class="commission-breakdown" {% if row.service_count <= 3 %}open{% endif %}>
+      <summary>Service commission breakdown</summary>
+      <div class="commission-breakdown-list">
+        {% for service in row.service_breakdown %}
+        <article class="commission-breakdown-item">
+          <div>
+            <strong>{{ service.service_name }}</strong>
+            <span>{{ service.total_jobs }} job{{ service.total_jobs|pluralize }}</span>
+          </div>
+          <div>
+            <span>Revenue</span>
+            <strong>UGX {{ service.total_revenue|floatformat:0|intcomma }}</strong>
+          </div>
+          <div>
+            <span>Commission</span>
+            <strong>UGX {{ service.total_commission|floatformat:0|intcomma }}</strong>
+            <small>Main UGX {{ service.main_commission|floatformat:0|intcomma }} · Support UGX {{ service.support_commission|floatformat:0|intcomma }}</small>
+          </div>
+          <div>
+            <span>Rate</span>
+            <strong>
+              {% if service.commission_rate_display %}
+                {{ service.commission_rate_display }}%
+              {% else %}
+                —
+              {% endif %}
+            </strong>
+          </div>
+        </article>
+        {% empty %}
+        <p class="empty-state">No services recorded.</p>
+        {% endfor %}
+      </div>
+    </details>
+  </article>
+  {% endfor %}
+</section>
+
+{% else %}
+<p class="empty-state">No employee sales data for this range.</p>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  const copper  = 'rgba(184,108,63,0.85)';
+  const copperL = 'rgba(184,108,63,0.25)';
+  const ocean   = 'rgba(33,95,120,0.82)';
+  const oceanL  = 'rgba(33,95,120,0.22)';
+  const forest  = 'rgba(47,111,87,0.82)';
+  const palette = [copper, ocean, forest,
+    'rgba(171,122,34,0.82)','rgba(130,80,60,0.82)','rgba(60,100,140,0.82)'];
+
+  Chart.defaults.font.family = '"Trebuchet MS","Gill Sans",sans-serif';
+  Chart.defaults.color = '#6b5d55';
+
+  /* ── Earnings bar chart ── */
+  const earningsCtx = document.getElementById('chart-earnings');
+  if (earningsCtx) {
+    const labels   = [{% for row in rows %}"{{ row.employee_name|escapejs }}"{% if not forloop.last %},{% endif %}{% endfor %}];
+    const revenue  = [{% for row in rows %}{{ row.total_sales|floatformat:0 }}{% if not forloop.last %},{% endif %}{% endfor %}];
+    const commission=[{% for row in rows %}{{ row.total_commission|floatformat:0 }}{% if not forloop.last %},{% endif %}{% endfor %}];
+    const net      = [{% for row in rows %}{{ row.net_revenue|floatformat:0 }}{% if not forloop.last %},{% endif %}{% endfor %}];
+
+    new Chart(earningsCtx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Revenue',    data: revenue,   backgroundColor: copper,  borderRadius: 6 },
+          { label: 'Commission', data: commission, backgroundColor: ocean,   borderRadius: 6 },
+          { label: 'Net',        data: net,        backgroundColor: forest,  borderRadius: 6 },
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom' } },
+        scales: {
+          x: { grid: { display: false } },
+          y: { grid: { color: 'rgba(67,49,38,0.08)' }, ticks: {
+            callback: v => 'UGX ' + Number(v).toLocaleString()
+          }}
+        }
+      }
+    });
+  }
+
+  /* ── Revenue split pie chart ── */
+  const splitCtx = document.getElementById('chart-split');
+  if (splitCtx) {
+    const labels  = [{% for row in rows %}"{{ row.employee_name|escapejs }}"{% if not forloop.last %},{% endif %}{% endfor %}];
+    const revenue = [{% for row in rows %}{{ row.total_sales|floatformat:0 }}{% if not forloop.last %},{% endif %}{% endfor %}];
+
+    new Chart(splitCtx, {
+      type: 'doughnut',
+      data: {
+        labels,
+        datasets: [{ data: revenue, backgroundColor: palette, borderWidth: 2, borderColor: '#fffaf2' }]
+      },
+      options: {
+        responsive: true,
+        cutout: '62%',
+        plugins: {
+          legend: { position: 'bottom' },
+          tooltip: { callbacks: { label: ctx => ' UGX ' + Number(ctx.parsed).toLocaleString() } }
+        }
+      }
+    });
+  }
+
+  /* ── Per-employee mini bar charts ── */
+  document.querySelectorAll('[id^="chart-emp-"]').forEach(function (canvas) {
+    const labels     = JSON.parse(canvas.dataset.labels     || '[]');
+    const revenue    = JSON.parse(canvas.dataset.revenue    || '[]');
+    const commission = JSON.parse(canvas.dataset.commission || '[]');
+    if (!labels.length) return;
+
+    new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Revenue',    data: revenue,    backgroundColor: copperL, borderColor: copper, borderWidth: 1.5, borderRadius: 5 },
+          { label: 'Commission', data: commission, backgroundColor: oceanL,  borderColor: ocean,  borderWidth: 1.5, borderRadius: 5 },
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } },
+        scales: {
+          x: { grid: { display: false } },
+          y: { grid: { color: 'rgba(67,49,38,0.07)' }, ticks: {
+            callback: v => 'UGX ' + Number(v).toLocaleString()
+          }}
+        }
+      }
+    });
+  });
+})();
+</script>
+{% endblock %}

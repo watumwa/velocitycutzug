@@ -1,0 +1,434 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Velocity Cutz{% endblock %}</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23b86c3f'/><text x='16' y='23' text-anchor='middle' font-size='20' font-family='Georgia,serif' fill='%23fff7f0'>V</text></svg>">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=20260509-staff-cards-hardfix">
+  <style id="vc-critical-production-layout-fix">
+    /* Critical production fix: keep utility elements out of the grid even when old static CSS is cached. */
+    body.admin-body { margin: 0; min-height: 100vh; }
+    body.admin-body .layout-shell {
+      display: grid !important;
+      grid-template-columns: 280px minmax(0, 1fr) !important;
+      align-items: stretch !important;
+      min-height: 100vh !important;
+      width: 100% !important;
+    }
+    body.admin-body .sidebar {
+      grid-column: 1 !important;
+      grid-row: 1 !important;
+      width: 280px !important;
+      max-width: 280px !important;
+      min-height: 100vh !important;
+      height: 100vh !important;
+      position: sticky !important;
+      top: 0 !important;
+      align-self: start !important;
+      overflow-y: auto !important;
+    }
+    body.admin-body .main-panel {
+      grid-column: 2 !important;
+      grid-row: 1 !important;
+      min-width: 0 !important;
+      min-height: 100vh !important;
+      display: flex !important;
+      flex-direction: column !important;
+    }
+    body.admin-body .sidebar-toggle {
+      display: none !important;
+      position: fixed !important;
+      top: 1rem !important;
+      left: 1rem !important;
+      z-index: 200 !important;
+    }
+    body.admin-body .sidebar-overlay {
+      display: none !important;
+      position: fixed !important;
+      inset: 0 !important;
+      z-index: 99 !important;
+    }
+    body.admin-body .modal-backdrop[hidden] {
+      display: none !important;
+      pointer-events: none !important;
+    }
+    @media (max-width: 1100px) {
+      body.admin-body .layout-shell { grid-template-columns: minmax(0, 1fr) !important; }
+      body.admin-body .sidebar {
+        position: fixed !important;
+        left: 0 !important;
+        top: 0 !important;
+        bottom: 0 !important;
+        z-index: 100 !important;
+        transform: translateX(-105%) !important;
+        transition: transform .24s ease !important;
+      }
+      body.admin-body .sidebar.sidebar--open { transform: translateX(0) !important; }
+      body.admin-body .main-panel { grid-column: 1 !important; }
+      body.admin-body .sidebar-toggle { display: inline-flex !important; }
+      body.admin-body .sidebar-overlay.sidebar-overlay--visible { display: block !important; }
+    }
+  </style>
+  {% block extra_styles %}{% endblock %}
+</head>
+<body class="admin-body {% block body_class %}{% endblock %}">
+  <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle navigation">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M4 7h16M4 12h16M4 17h16"></path>
+    </svg>
+  </button>
+
+  <div class="layout-shell">
+    {% include "includes/sidebar.html" %}
+    <main class="main-panel">
+      {% include "includes/navbar.html" %}
+      <section class="content-shell">
+        {% if messages %}
+        <div class="messages">
+          {% for message in messages %}
+          <div class="message message-{{ message.tags|default:'info' }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if pending_approval_count %}
+        <div class="approval-alert" data-pending-approval-banner>
+          <div class="approval-alert-icon" aria-hidden="true">!</div>
+          <div>
+            <strong>{{ pending_approval_count }} sale{{ pending_approval_count|pluralize }} waiting for approval</strong>
+            <p>Employees have submitted services that need admin/cashier confirmation before sales and commission are counted.</p>
+          </div>
+          <a class="button button-primary" href="{% url 'sales:list' %}?status=pending">Review now</a>
+        </div>
+        {% endif %}
+
+        {% block page_header %}
+        <header class="page-header">
+          <div>
+            <p class="eyebrow">Velocity Cutz</p>
+            <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+          </div>
+          <div class="page-actions">
+            {% block actions %}{% endblock %}
+          </div>
+        </header>
+        {% endblock %}
+
+        {% block content %}{% endblock %}
+      </section>
+    </main>
+  </div>
+
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+  <!-- Modal -->
+  <div class="modal-backdrop" id="modal-backdrop" hidden>
+    <div class="modal-box" id="modal-box" role="dialog" aria-modal="true">
+      <button class="modal-close" id="modal-close" aria-label="Close">&times;</button>
+      <div class="modal-body" id="modal-body"></div>
+    </div>
+  </div>
+
+  <div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+
+  {% if can_review_sale_approvals %}
+  <div id="pending-approval-monitor" hidden data-pending-approval-monitor data-initial-pending-count="{{ pending_approval_count }}" data-latest-pending-id="{{ latest_pending_sale_id }}"></div>
+  {% endif %}
+
+  <script>
+  (function () {
+    const body = document.body;
+    const sidebar = document.getElementById("sidebar");
+    const overlay = document.getElementById("sidebar-overlay");
+    const toggle = document.getElementById("sidebar-toggle");
+    const clock = document.querySelector("[data-live-clock]");
+
+    /* ── Sidebar ── */
+    function closeSidebar() {
+      if (!sidebar || !overlay) return;
+      sidebar.classList.remove("sidebar--open");
+      overlay.classList.remove("sidebar-overlay--visible");
+    }
+    if (toggle && sidebar && overlay) {
+      toggle.addEventListener("click", function () {
+        if (window.matchMedia("(max-width: 1100px)").matches) {
+          const open = sidebar.classList.toggle("sidebar--open");
+          overlay.classList.toggle("sidebar-overlay--visible", open);
+        } else {
+          body.classList.toggle("sidebar-collapsed");
+        }
+      });
+      overlay.addEventListener("click", closeSidebar);
+    }
+
+    /* ── Toast ── */
+    const ICONS = { success: "✓", error: "✕", warning: "⚠", info: "ℹ" };
+    function showToast(message, type) {
+      type = type || "info";
+      const stack = document.getElementById("toast-stack");
+      if (!stack || !message) return;
+      const toast = document.createElement("div");
+      toast.className = "toast toast--" + type;
+      toast.innerHTML =
+        '<span class="toast-icon">' + (ICONS[type] || ICONS.info) + '</span>' +
+        '<span class="toast-msg">' + message + '</span>' +
+        '<button class="toast-dismiss" aria-label="Dismiss">&times;</button>';
+      toast.querySelector(".toast-dismiss").addEventListener("click", function () { dismissToast(toast); });
+      stack.appendChild(toast);
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { toast.classList.add("toast--visible"); });
+      });
+      const timer = setTimeout(function () { dismissToast(toast); }, 3800);
+      toast._timer = timer;
+    }
+    function dismissToast(toast) {
+      clearTimeout(toast._timer);
+      toast.classList.remove("toast--visible");
+      toast.addEventListener("transitionend", function () { toast.remove(); }, { once: true });
+    }
+    window.showToast = showToast;
+
+    /* ── Modal ── */
+    const backdrop = document.getElementById("modal-backdrop");
+    const modalBox = document.getElementById("modal-box");
+    const modalBody = document.getElementById("modal-body");
+    const modalClose = document.getElementById("modal-close");
+
+    function replaceModalContent(html) {
+      modalBody.innerHTML = html;
+      bindModalForms();
+      const errorField = modalBody.querySelector(".error, .form-errors, [aria-invalid='true']");
+      const first = errorField || modalBody.querySelector("input,select,textarea,button");
+      if (first && typeof first.focus === "function") first.focus();
+    }
+
+    function openModal(html) {
+      replaceModalContent(html);
+      backdrop.hidden = false;
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { backdrop.classList.add("modal--open"); });
+      });
+    }
+
+    function closeModal() {
+      backdrop.classList.remove("modal--open");
+      backdrop.addEventListener("transitionend", function () {
+        backdrop.hidden = true;
+        modalBody.innerHTML = "";
+      }, { once: true });
+    }
+
+    function setFormLoading(form, loading) {
+      const btn = form.querySelector("[type=submit]");
+      if (!btn) return;
+      if (!btn.dataset.originalText) btn.dataset.originalText = btn.textContent;
+      btn.disabled = loading;
+      btn.textContent = loading ? "Saving…" : btn.dataset.originalText;
+    }
+
+    function showModalServerError(message) {
+      const alert = document.createElement("div");
+      alert.className = "form-errors";
+      alert.innerHTML = message || "The record could not be saved. Please check the server error log and try again.";
+      modalBody.prepend(alert);
+    }
+
+    function bindModalForms() {
+      modalBody.querySelectorAll("form").forEach(function (form) {
+        if (form.dataset.modalBound === "1") return;
+        form.dataset.modalBound = "1";
+        form.addEventListener("submit", function (e) {
+          e.preventDefault();
+          setFormLoading(form, true);
+          const data = new FormData(form);
+          fetch(form.action || window.location.href, {
+            method: "POST",
+            headers: {
+              "X-Modal": "1",
+              "X-Requested-With": "XMLHttpRequest",
+              "X-CSRFToken": data.get("csrfmiddlewaretoken") || ""
+            },
+            body: data,
+            credentials: "same-origin",
+          })
+          .then(function (res) {
+            const success = res.headers.get("X-Modal-Success");
+            if (success) {
+              closeModal();
+              showToast(success, "success");
+              setTimeout(function () { window.location.reload(); }, 500);
+              return;
+            }
+            return res.text().then(function (html) {
+              const trimmed = html.trim();
+              if (!res.ok) {
+                setFormLoading(form, false);
+                showToast("The form could not be saved. Check the highlighted message.", "error");
+                if (!trimmed || trimmed.startsWith("<!")) {
+                  showModalServerError("The server returned an error while saving. Open <strong>stderr.log</strong> to see the exact cause.");
+                  return;
+                }
+              }
+              if (trimmed.startsWith("<!")) {
+                // Got a full page such as login redirect. Continue outside the modal.
+                window.location.href = form.action || window.location.href;
+                return;
+              }
+              replaceModalContent(html);
+              if (modalBody.querySelector(".error, .form-errors")) {
+                showToast("Please correct the highlighted fields.", "warning");
+              }
+            });
+          })
+          .catch(function () {
+            setFormLoading(form, false);
+            showToast("Network/server problem while saving. Please try again.", "error");
+          });
+        });
+      });
+    }
+
+    if (modalClose) modalClose.addEventListener("click", closeModal);
+    if (backdrop) backdrop.addEventListener("click", function (e) {
+      if (e.target === backdrop) closeModal();
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && backdrop && !backdrop.hidden) closeModal();
+    });
+
+    /* ── Modal trigger links ── */
+    document.addEventListener("click", function (e) {
+      const trigger = e.target.closest("[data-modal-url]");
+      if (trigger) {
+        e.preventDefault();
+        fetch(trigger.dataset.modalUrl, {
+          headers: { "X-Modal": "1" },
+          credentials: "same-origin",
+        })
+        .then(function (r) {
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          return r.text();
+        })
+        .then(function (html) {
+          if (html.trim().startsWith("<!")) {
+            // Got a full page (e.g. login redirect) — navigate normally
+            window.location.href = trigger.dataset.modalUrl;
+            return;
+          }
+          openModal(html);
+        })
+        .catch(function () { window.location.href = trigger.dataset.modalUrl; });
+        return;
+      }
+
+      const shortcut = e.target.closest(".shortcut-btn");
+      if (shortcut) {
+        const input = document.getElementById(shortcut.dataset.target);
+        if (!input) return;
+        const d = new Date();
+        d.setDate(d.getDate() + Number(shortcut.dataset.offset || 0));
+        input.value = d.toISOString().slice(0, 10);
+        return;
+      }
+
+      const toastTarget = e.target.closest("[data-toast]");
+      if (toastTarget && !toastTarget.closest("[data-modal-url]")) {
+        showToast(toastTarget.dataset.toast);
+      }
+    });
+
+    document.querySelectorAll("[data-prevent-nav]").forEach(function (link) {
+      link.addEventListener("click", function (e) {
+        e.preventDefault();
+        showToast(link.dataset.toast || "This module is coming soon.", "info");
+      });
+    });
+
+    /* ── Dashboard table ── */
+    document.querySelectorAll("[data-dashboard-table]").forEach(function (tableShell) {
+      const search = tableShell.querySelector("[data-dashboard-table-search]");
+      const status = tableShell.querySelector("[data-dashboard-table-status]");
+      const rows = Array.from(tableShell.querySelectorAll("[data-dashboard-row]"));
+      const prev = tableShell.querySelector("[data-page-prev]");
+      const next = tableShell.querySelector("[data-page-next]");
+      const count = tableShell.querySelector("[data-page-count]");
+      const empty = tableShell.querySelector("[data-dashboard-empty]");
+      const pageSize = Number(tableShell.dataset.pageSize || 6);
+      let page = 1;
+      function render() {
+        const term = (search && search.value || "").trim().toLowerCase();
+        const sel = status && status.value || "all";
+        const filtered = rows.filter(function (row) {
+          return (!term || row.textContent.toLowerCase().includes(term)) &&
+                 (sel === "all" || row.dataset.status === sel);
+        });
+        const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
+        page = Math.min(page, pages);
+        rows.forEach(function (r) { r.hidden = true; });
+        filtered.slice((page - 1) * pageSize, page * pageSize).forEach(function (r) { r.hidden = false; });
+        if (count) count.textContent = filtered.length ? "Page " + page + " of " + pages : "No records";
+        if (prev) prev.disabled = page <= 1;
+        if (next) next.disabled = page >= pages;
+        if (empty) empty.hidden = filtered.length !== 0;
+      }
+      if (search) search.addEventListener("input", function () { page = 1; render(); });
+      if (status) status.addEventListener("change", function () { page = 1; render(); });
+      if (prev) prev.addEventListener("click", function () { page -= 1; render(); });
+      if (next) next.addEventListener("click", function () { page += 1; render(); });
+      render();
+    });
+
+    /* ── Clock ── */
+    function updateClock() {
+      if (!clock) return;
+      clock.textContent = new Intl.DateTimeFormat(undefined, {
+        weekday: "short", month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit"
+      }).format(new Date());
+    }
+    updateClock();
+    setInterval(updateClock, 30000);
+    setTimeout(function () { body.classList.add("dashboard-ready"); }, 180);
+
+    /* ── Pending approval notification polling for admin/cashier ── */
+    const pendingWidget = document.querySelector("[data-pending-approval-monitor]") || document.querySelector("[data-pending-approval-widget]");
+    if (pendingWidget) {
+      let lastCount = Number(pendingWidget.dataset.initialPendingCount || 0);
+      let lastLatestId = String(pendingWidget.dataset.latestPendingId || "");
+      function refreshPendingApprovals() {
+        fetch("{% url 'sales:pending_status' %}", {
+          headers: { "Accept": "application/json" },
+          credentials: "same-origin",
+        })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (data) {
+          if (!data) return;
+          const count = Number(data.count || 0);
+          const latestId = String(data.latest_id || "");
+          if (count > lastCount && latestId !== lastLatestId) {
+            showToast("New employee sale submitted for approval.", "warning");
+          }
+          lastCount = count;
+          lastLatestId = latestId;
+        })
+        .catch(function () {});
+      }
+      setInterval(refreshPendingApprovals, 30000);
+    }
+
+    /* ── Fire Django messages as toasts ── */
+    document.querySelectorAll(".message").forEach(function (el) {
+      const type = el.classList.contains("message-success") ? "success"
+                 : el.classList.contains("message-error") || el.classList.contains("message-danger") ? "error"
+                 : el.classList.contains("message-warning") ? "warning" : "info";
+      showToast(el.textContent.trim(), type);
+      el.remove();
+    });
+    const msgBox = document.querySelector(".messages");
+    if (msgBox && !msgBox.children.length) msgBox.remove();
+  })();
+  </script>
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>

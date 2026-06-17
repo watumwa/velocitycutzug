@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Service Report{% endblock %}
+{% block page_title %}Service Report{% endblock %}
+
+{% block actions %}
+<a class="button button-secondary" href="?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}&export=csv">Export CSV</a>
+{% endblock %}
+
+{% block content %}
+
+<section class="panel form-panel">
+  <form method="get" class="inline-form inline-form-wide">
+    <div class="field compact">
+      <label for="id_start_date">Start Date</label>
+      <input id="id_start_date" name="start_date" type="date" value="{{ start_date|date:'Y-m-d' }}">
+      <div class="date-shortcuts">
+        <button type="button" class="shortcut-btn" data-target="id_start_date" data-offset="0">Today</button>
+        <button type="button" class="shortcut-btn" data-target="id_start_date" data-offset="-1">Yesterday</button>
+      </div>
+    </div>
+    <div class="field compact">
+      <label for="id_end_date">End Date</label>
+      <input id="id_end_date" name="end_date" type="date" value="{{ end_date|date:'Y-m-d' }}">
+      <div class="date-shortcuts">
+        <button type="button" class="shortcut-btn" data-target="id_end_date" data-offset="0">Today</button>
+        <button type="button" class="shortcut-btn" data-target="id_end_date" data-offset="-1">Yesterday</button>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="button button-primary" type="submit">Apply</button>
+    </div>
+  </form>
+</section>
+
+{% if rows %}
+
+<div class="two-column">
+
+  {# Horizontal bar chart: revenue by service #}
+  <article class="panel">
+    <div class="panel-header">
+      <div>
+        <p class="eyebrow">Revenue by Service</p>
+        <h2>Performance Chart</h2>
+      </div>
+    </div>
+    <canvas id="chart-revenue" height="260"
+      data-labels='[{% for row in rows %}"{{ row.service__name|escapejs }}"{% if not forloop.last %},{% endif %}{% endfor %}]'
+      data-revenue='[{% for row in rows %}{{ row.total_revenue|floatformat:0 }}{% if not forloop.last %},{% endif %}{% endfor %}]'>
+    </canvas>
+  </article>
+
+  {# Doughnut: jobs share #}
+  <article class="panel">
+    <div class="panel-header">
+      <div>
+        <p class="eyebrow">Jobs Share</p>
+        <h2>Service Popularity</h2>
+      </div>
+    </div>
+    <canvas id="chart-jobs" height="260"
+      data-labels='[{% for row in rows %}"{{ row.service__name|escapejs }}"{% if not forloop.last %},{% endif %}{% endfor %}]'
+      data-jobs='[{% for row in rows %}{{ row.jobs_done }}{% if not forloop.last %},{% endif %}{% endfor %}]'>
+    </canvas>
+  </article>
+
+</div>
+
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <p class="eyebrow">{{ start_date|date:"d M Y" }} – {{ end_date|date:"d M Y" }}</p>
+      <h2>Service Performance</h2>
+    </div>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Service</th>
+          <th>Jobs Done</th>
+          <th>Total Revenue</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td data-label="Service">{{ row.service__name }}</td>
+          <td data-label="Jobs Done">{{ row.jobs_done }}</td>
+          <td data-label="Total Revenue">UGX {{ row.total_revenue|floatformat:0|intcomma }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+{% else %}
+<p class="empty-state">No service sales data for this range.</p>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  const palette = [
+    'rgba(184,108,63,0.82)','rgba(33,95,120,0.82)','rgba(47,111,87,0.82)',
+    'rgba(171,122,34,0.82)','rgba(130,80,60,0.82)','rgba(60,100,140,0.82)',
+    'rgba(200,140,90,0.82)','rgba(80,130,110,0.82)',
+  ];
+
+  Chart.defaults.font.family = '"Trebuchet MS","Gill Sans",sans-serif';
+  Chart.defaults.color = '#6b5d55';
+
+  function parseCanvas(id) {
+    const el = document.getElementById(id);
+    if (!el) return null;
+    return {
+      el,
+      labels:  JSON.parse(el.dataset.labels  || '[]'),
+      revenue: JSON.parse(el.dataset.revenue || '[]'),
+      jobs:    JSON.parse(el.dataset.jobs    || '[]'),
+    };
+  }
+
+  const rev = parseCanvas('chart-revenue');
+  if (rev) {
+    new Chart(rev.el, {
+      type: 'bar',
+      data: {
+        labels: rev.labels,
+        datasets: [{
+          label: 'Revenue',
+          data: rev.revenue,
+          backgroundColor: palette,
+          borderRadius: 6,
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { color: 'rgba(67,49,38,0.08)' }, ticks: { callback: v => 'UGX ' + Number(v).toLocaleString() } },
+          y: { grid: { display: false } }
+        }
+      }
+    });
+  }
+
+  const jobs = parseCanvas('chart-jobs');
+  if (jobs) {
+    new Chart(jobs.el, {
+      type: 'doughnut',
+      data: {
+        labels: jobs.labels,
+        datasets: [{ data: jobs.jobs, backgroundColor: palette, borderWidth: 2, borderColor: '#fffaf2' }]
+      },
+      options: {
+        responsive: true,
+        cutout: '60%',
+        plugins: {
+          legend: { position: 'bottom' },
+          tooltip: { callbacks: { label: ctx => ' ' + ctx.parsed + ' jobs' } }
+        }
+      }
+    });
+  }
+})();
+</script>
+{% endblock %}

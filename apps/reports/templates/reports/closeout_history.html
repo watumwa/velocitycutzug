@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Closeout History{% endblock %}
+{% block page_title %}Closeout History{% endblock %}
+
+{% block actions %}
+<a class="button button-secondary" href="?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}&export=csv">Export CSV</a>
+<a class="button button-primary" href="{% url 'reports:daily' %}">Daily Closeout</a>
+{% endblock %}
+
+{% block content %}
+<section class="panel form-panel">
+  <form method="get" class="inline-form">
+    <div class="field compact">
+      <label for="id_start_date">Start</label>
+      <input id="id_start_date" name="start_date" type="date" value="{{ start_date|date:'Y-m-d' }}">
+    </div>
+    <div class="field compact">
+      <label for="id_end_date">End</label>
+      <input id="id_end_date" name="end_date" type="date" value="{{ end_date|date:'Y-m-d' }}">
+    </div>
+    <div class="form-actions">
+      <button class="button button-primary" type="submit">Apply</button>
+    </div>
+  </form>
+</section>
+
+<section class="stats-grid">
+  <article class="stat-card">
+    <span class="stat-label">Expected Cash</span>
+    <strong>UGX {{ totals.expected_cash|floatformat:0|intcomma }}</strong>
+  </article>
+  <article class="stat-card">
+    <span class="stat-label">Counted Cash</span>
+    <strong>UGX {{ totals.counted_cash|floatformat:0|intcomma }}</strong>
+  </article>
+  <article class="stat-card {% if totals.variance < 0 %}accent-copper{% elif totals.variance > 0 %}accent-blue{% else %}accent-green{% endif %}">
+    <span class="stat-label">Net Variance</span>
+    <strong>UGX {{ totals.variance|floatformat:0|intcomma }}</strong>
+  </article>
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <p class="eyebrow">Money Control</p>
+      <h2>Closed Days</h2>
+    </div>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Date</th><th>Sales</th><th>Expected Cash</th><th>Counted</th><th>Variance</th><th>Closed By</th><th>Closed At</th></tr></thead>
+      <tbody>
+        {% for closeout in closeouts %}
+        <tr>
+          <td data-label="Date">{{ closeout.business_date|date:"d M Y" }}</td>
+          <td data-label="Sales">UGX {{ closeout.total_sales|floatformat:0|intcomma }}</td>
+          <td data-label="Expected">UGX {{ closeout.expected_cash|floatformat:0|intcomma }}</td>
+          <td data-label="Counted">UGX {{ closeout.counted_cash|floatformat:0|intcomma }}</td>
+          <td data-label="Variance"><strong class="{% if closeout.cash_variance < 0 %}text-danger{% elif closeout.cash_variance > 0 %}text-success{% endif %}">UGX {{ closeout.cash_variance|floatformat:0|intcomma }}</strong></td>
+          <td data-label="Closed By">{{ closeout.closed_by.get_full_name|default:closeout.closed_by.username|default:"-" }}</td>
+          <td data-label="Closed At">{{ closeout.closed_at|date:"d M H:i" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7">No closeouts found for this period.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "includes/pagination.html" %}
+</section>
+{% endblock %}

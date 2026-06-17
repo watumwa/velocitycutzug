@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}My Commission{% endblock %}
+{% block page_title %}My Commission{% endblock %}
+
+{% block actions %}
+<a class="button button-secondary" href="?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}&export=csv">Export CSV</a>
+{% endblock %}
+
+{% block content %}
+<section class="panel form-panel">
+  <form method="get" class="inline-form inline-form-wide">
+    <div class="field compact">
+      <label for="id_start_date">Start Date</label>
+      <input id="id_start_date" name="start_date" type="date" value="{{ start_date|date:'Y-m-d' }}">
+      <div class="date-shortcuts">
+        <button type="button" class="shortcut-btn" data-target="id_start_date" data-offset="0">Today</button>
+        <button type="button" class="shortcut-btn" data-target="id_start_date" data-offset="-1">Yesterday</button>
+      </div>
+    </div>
+    <div class="field compact">
+      <label for="id_end_date">End Date</label>
+      <input id="id_end_date" name="end_date" type="date" value="{{ end_date|date:'Y-m-d' }}">
+      <div class="date-shortcuts">
+        <button type="button" class="shortcut-btn" data-target="id_end_date" data-offset="0">Today</button>
+        <button type="button" class="shortcut-btn" data-target="id_end_date" data-offset="-1">Yesterday</button>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="button button-primary" type="submit">Apply</button>
+    </div>
+  </form>
+</section>
+
+<section class="stats-grid">
+  <article class="stat-card accent-blue">
+    <span class="stat-label">Today Commission</span>
+    <strong>UGX {{ today_total_commission|floatformat:0|intcomma }}</strong>
+    <small>{{ today_total_jobs_done }} job{{ today_total_jobs_done|pluralize }} today</small>
+  </article>
+  <article class="stat-card accent-copper">
+    <span class="stat-label">Period Sales</span>
+    <strong>UGX {{ total_sales|floatformat:0|intcomma }}</strong>
+    <small>{{ total_jobs_done }} job{{ total_jobs_done|pluralize }}</small>
+  </article>
+  <article class="stat-card accent-green">
+    <span class="stat-label">Period Commission</span>
+    <strong>UGX {{ total_commission|floatformat:0|intcomma }}</strong>
+    <small>{{ start_date|date:"d M" }} - {{ end_date|date:"d M Y" }}</small>
+  </article>
+  <article class="stat-card">
+    <span class="stat-label">Pending Approval</span>
+    <strong>{{ pending_count }}</strong>
+    <small>{{ today_pending_count }} pending today</small>
+  </article>
+  <article class="stat-card">
+    <span class="stat-label">Department</span>
+    <strong>{{ employee.department.name|default:"-" }}</strong>
+    <small>{{ employee.role.name|default:"Employee" }}</small>
+  </article>
+</section>
+
+<div class="two-column">
+  <section class="panel">
+    <div class="panel-header">
+      <div>
+        <p class="eyebrow">{{ employee.name }}</p>
+        <h2>Service Breakdown</h2>
+      </div>
+    </div>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Service</th>
+            <th>Main Jobs</th>
+            <th>Support Jobs</th>
+            <th>Sales</th>
+            <th>Commission</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in service_breakdown %}
+          <tr>
+            <td data-label="Service">{{ row.service__name }}</td>
+            <td data-label="Main Jobs">{{ row.jobs }}</td>
+            <td data-label="Support Jobs">{{ row.support_jobs }}</td>
+            <td data-label="Sales">UGX {{ row.total_sales|floatformat:0|intcomma }}</td>
+            <td data-label="Commission">UGX {{ row.total_commission|floatformat:0|intcomma }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5">No commission records in this date range.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-header">
+      <div>
+        <p class="eyebrow">Today</p>
+        <h2>Daily Commission</h2>
+      </div>
+    </div>
+    <div class="dashboard-revenue-list">
+      <div class="dashboard-revenue-row">
+        <div>
+          <span class="dashboard-date">Sales handled</span>
+          <strong>UGX {{ today_total_sales|floatformat:0|intcomma }}</strong>
+        </div>
+        <div>
+          <span class="dashboard-date">Commission earned</span>
+          <strong>UGX {{ today_total_commission|floatformat:0|intcomma }}</strong>
+        </div>
+      </div>
+      <div class="dashboard-revenue-row">
+        <div>
+          <span class="dashboard-date">Jobs done</span>
+          <strong>{{ today_total_jobs_done }}</strong>
+        </div>
+        <div>
+          <span class="dashboard-date">Login username</span>
+          <strong>{{ request.user.username }}</strong>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <h2>My Commission Records</h2>
+      <p>Approved services count in commission. Pending/rejected records are shown for tracking but do not count yet.</p>
+    </div>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Service</th>
+          <th>Customer</th>
+          <th>Role</th>
+          <th>Sale Amount</th>
+          <th>Commission</th>
+          <th>Rate</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+        <tr>
+          <td data-label="Date">{{ item.date|date:"d M Y H:i" }}</td>
+          <td data-label="Service">{{ item.service }}</td>
+          <td data-label="Customer">{{ item.customer }}</td>
+          <td data-label="Role">{{ item.role }}</td>
+          <td data-label="Sale Amount">UGX {{ item.sale_amount|floatformat:0|intcomma }}</td>
+          <td data-label="Commission">UGX {{ item.commission|floatformat:0|intcomma }}</td>
+          <td data-label="Rate">{% if item.role == "Support" %}Fixed support{% elif item.rate %}{{ item.rate }}%{% else %}Default{% endif %}</td>
+          <td data-label="Status">
+            {% if item.status == "approved" %}
+              <span class="badge badge-success">Approved</span>
+            {% elif item.status == "pending" %}
+              <span class="badge badge-muted">Pending</span>
+            {% elif item.status == "rejected" %}
+              <span class="badge badge-danger">Rejected</span>
+            {% else %}
+              <span class="badge badge-muted">{{ item.status_display }}</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8">No commission records found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

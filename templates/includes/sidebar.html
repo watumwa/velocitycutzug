@@ -1,0 +1,67 @@
+<aside class="sidebar" id="sidebar">
+  <div class="brand-block">
+    <strong>Velocity Cutz</strong>
+    <small>Admin Studio</small>
+  </div>
+
+  {% with profile=request.user.employee_profile %}
+  <nav class="nav-links" aria-label="Primary navigation">
+    <a href="{% url 'home' %}" class="{% if request.path == '/' %}active{% endif %}">Dashboard</a>
+
+    {% if request.user.is_superuser or profile.role.code == 'admin' %}
+      <a href="#appointments" data-prevent-nav data-toast="Appointments module is coming next.">Appointments</a>
+      <a href="{% url 'sales:list' %}" class="nav-with-badge {% if '/sales/' in request.path %}active{% endif %}">
+        <span>POS</span>
+        {% if pending_approval_count %}<span class="nav-pending-badge">{{ pending_approval_count }}</span>{% endif %}
+      </a>
+      <a href="{% url 'customers:list' %}" class="{% if '/customers/' in request.path %}active{% endif %}">Customers</a>
+      <a href="{% url 'employees:list' %}" class="{% if '/employees/' in request.path %}active{% endif %}">Employees</a>
+      <a href="{% url 'services:list' %}" class="{% if '/services/' in request.path and '/reports/services/' not in request.path %}active{% endif %}">Services</a>
+      <a href="{% url 'reports:daily' %}" class="{% if '/reports/' in request.path and '/my-commissions/' not in request.path %}active{% endif %}">Reports</a>
+      <a href="{% url 'inventory:list' %}" class="{% if '/inventory/' in request.path %}active{% endif %}">Inventory</a>
+      <a href="{% url 'expenses:list' %}" class="{% if '/expenses/' in request.path %}active{% endif %}">Expenses</a>
+      <a href="#settings" data-prevent-nav data-toast="Settings module is coming soon.">Settings</a>
+    {% elif profile.role.code == 'cashier' %}
+      <a href="{% url 'sales:list' %}" class="nav-with-badge {% if '/sales/' in request.path %}active{% endif %}">
+        <span>POS</span>
+        {% if pending_approval_count %}<span class="nav-pending-badge">{{ pending_approval_count }}</span>{% endif %}
+      </a>
+      <a href="{% url 'customers:list' %}" class="{% if '/customers/' in request.path %}active{% endif %}">Customers</a>
+      <a href="{% url 'reports:daily' %}" class="{% if '/reports/' in request.path and '/my-commissions/' not in request.path %}active{% endif %}">Reports</a>
+      <a href="{% url 'inventory:list' %}" class="{% if '/inventory/' in request.path %}active{% endif %}">Inventory</a>
+      <a href="{% url 'expenses:list' %}" class="{% if '/expenses/' in request.path %}active{% endif %}">Expenses</a>
+      <a href="{% url 'reports:my_commissions' %}" class="{% if '/my-commissions/' in request.path %}active{% endif %}">My Commission</a>
+    {% elif profile %}
+      <a href="{% url 'sales:list' %}" class="{% if '/sales/' in request.path %}active{% endif %}">My Services</a>
+      <a href="{% url 'reports:my_commissions' %}" class="{% if '/my-commissions/' in request.path %}active{% endif %}">My Commission</a>
+    {% else %}
+      <a href="#appointments" data-prevent-nav data-toast="Appointments module is coming next.">Appointments</a>
+      <a href="{% url 'sales:list' %}" class="nav-with-badge {% if '/sales/' in request.path %}active{% endif %}">
+        <span>POS</span>
+        {% if pending_approval_count %}<span class="nav-pending-badge">{{ pending_approval_count }}</span>{% endif %}
+      </a>
+      <a href="{% url 'customers:list' %}" class="{% if '/customers/' in request.path %}active{% endif %}">Customers</a>
+      <a href="{% url 'employees:list' %}" class="{% if '/employees/' in request.path %}active{% endif %}">Employees</a>
+      <a href="{% url 'services:list' %}" class="{% if '/services/' in request.path and '/reports/services/' not in request.path %}active{% endif %}">Services</a>
+      <a href="{% url 'reports:daily' %}" class="{% if '/reports/' in request.path %}active{% endif %}">Reports</a>
+      <a href="{% url 'inventory:list' %}" class="{% if '/inventory/' in request.path %}active{% endif %}">Inventory</a>
+      <a href="{% url 'expenses:list' %}" class="{% if '/expenses/' in request.path %}active{% endif %}">Expenses</a>
+    {% endif %}
+  </nav>
+  {% endwith %}
+
+  {% if request.user.is_authenticated %}
+  <div class="sidebar-note">
+    <p>Logged in as <strong>{{ request.user.get_full_name|default:request.user.username }}</strong></p>
+    {% with profile=request.user.employee_profile %}
+      {% if profile %}
+      <p><small>{{ profile.role.name|default:"Employee" }}{% if profile.department %} · {{ profile.department.name }}{% endif %}</small></p>
+      {% endif %}
+    {% endwith %}
+    <form method="post" action="{% url 'accounts:logout' %}">
+      {% csrf_token %}
+      <button class="button button-secondary sidebar-logout-button" type="submit" style="width:100%;margin-top:0.5rem;">Logout</button>
+    </form>
+  </div>
+  {% endif %}
+</aside>

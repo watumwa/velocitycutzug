@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Audit Trail{% endblock %}
+{% block page_title %}Audit Trail{% endblock %}
+
+{% block content %}
+<section class="panel form-panel">
+  <form method="get" class="inline-form inline-form-wide">
+    <div class="field compact">
+      <label for="id_q">Search</label>
+      <input id="id_q" name="q" type="search" value="{{ filter_q }}" placeholder="Sale, expense, product, closeout...">
+    </div>
+    <div class="field compact">
+      <label for="id_action">Action</label>
+      <select id="id_action" name="action">
+        <option value="">All actions</option>
+        {% for value,label in action_choices %}
+        <option value="{{ value }}" {% if filter_action == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-actions">
+      <button class="button button-primary" type="submit">Apply</button>
+      <a class="button button-secondary" href="{% url 'core:audit_log' %}">Reset</a>
+    </div>
+  </form>
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <p class="eyebrow">Accountability</p>
+      <h2>System Activity</h2>
+    </div>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Time</th><th>User</th><th>Action</th><th>Record</th><th>Details</th></tr></thead>
+      <tbody>
+        {% for log in logs %}
+        <tr>
+          <td data-label="Time">{{ log.created_at|date:"d M Y H:i" }}</td>
+          <td data-label="User">{{ log.actor.get_full_name|default:log.actor.username|default:"System" }}</td>
+          <td data-label="Action"><span class="badge badge-muted">{{ log.get_action_display }}</span></td>
+          <td data-label="Record">{{ log.object_repr }}</td>
+          <td data-label="Details"><small class="field-note">{{ log.details }}</small></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5">No audit activity recorded yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "includes/pagination.html" %}
+</section>
+{% endblock %}

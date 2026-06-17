@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Expenses{% endblock %}
+{% block page_title %}Expenses{% endblock %}
+
+{% block actions %}
+<a class="button button-primary" data-modal-url="{% url 'expenses:create' %}" href="{% url 'expenses:create' %}">Add Expense</a>
+{% endblock %}
+
+{% block content %}
+<section class="stats-grid">
+  <article class="stat-card accent-copper">
+    <span class="stat-label">Today Expenses</span>
+    <strong>UGX {{ today_total|floatformat:0|intcomma }}</strong>
+    <small>{{ start_date|date:"d M" }} - {{ end_date|date:"d M Y" }}</small>
+  </article>
+  <article class="stat-card accent-blue">
+    <span class="stat-label">This Week</span>
+    <strong>UGX {{ week_total|floatformat:0|intcomma }}</strong>
+    <small>Running weekly total</small>
+  </article>
+  <article class="stat-card accent-green">
+    <span class="stat-label">This Month</span>
+    <strong>UGX {{ month_total|floatformat:0|intcomma }}</strong>
+    <small>Month-to-date expenses</small>
+  </article>
+  <article class="stat-card">
+    <span class="stat-label">Filtered Total</span>
+    <strong>UGX {{ period_total|floatformat:0|intcomma }}</strong>
+    <small>{{ page_obj.paginator.count }} record{{ page_obj.paginator.count|pluralize }}</small>
+  </article>
+</section>
+
+<section class="panel form-panel expense-filters">
+  <div class="panel-header">
+    <div>
+      <p class="eyebrow">Salon Costs</p>
+      <h2>Track operational expenses</h2>
+      <p>Record rent, utilities, stock purchases, cleaning, transport, repairs, licences, and any other salon cost.</p>
+    </div>
+  </div>
+  <form method="get" class="inline-form inline-form-wide">
+    <div class="field compact">
+      <label for="id_q">Fast Search</label>
+      <input id="id_q" name="q" type="search" value="{{ filter_q }}" placeholder="Search title, vendor, receipt..." data-expense-search>
+    </div>
+    <div class="field compact">
+      <label for="id_category">Category</label>
+      <select id="id_category" name="category">
+        <option value="">All categories</option>
+        {% for value,label in category_choices %}
+        <option value="{{ value }}" {% if filter_category == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field compact">
+      <label for="id_payment_method">Payment</label>
+      <select id="id_payment_method" name="payment_method">
+        <option value="">All methods</option>
+        {% for value,label in payment_method_choices %}
+        <option value="{{ value }}" {% if filter_payment_method == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field compact">
+      <label for="id_start_date">Start Date</label>
+      <input id="id_start_date" name="start_date" type="date" value="{{ start_date|date:'Y-m-d' }}">
+    </div>
+    <div class="field compact">
+      <label for="id_end_date">End Date</label>
+      <input id="id_end_date" name="end_date" type="date" value="{{ end_date|date:'Y-m-d' }}">
+    </div>
+    <div class="form-actions">
+      <button class="button button-primary" type="submit">Apply</button>
+      <a class="button button-secondary" href="{% url 'expenses:list' %}">Reset</a>
+    </div>
+  </form>
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <h2>Expense Records</h2>
+      <p>These records reduce profit on the dashboard and daily report.</p>
+    </div>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Expense</th>
+          <th>Category</th>
+          <th>Vendor / Payee</th>
+          <th>Payment</th>
+          <th>Receipt</th>
+          <th>Amount</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for expense in expenses %}
+        <tr data-expense-row>
+          <td data-label="Date">{{ expense.expense_date|date:"d M Y" }}</td>
+          <td data-label="Expense">
+            <strong>{{ expense.title }}</strong>
+            {% if expense.notes %}<small class="field-note">{{ expense.notes|truncatechars:80 }}</small>{% endif %}
+          </td>
+          <td data-label="Category"><span class="badge badge-muted">{{ expense.get_category_display }}</span></td>
+          <td data-label="Vendor / Payee">{{ expense.vendor|default:"-" }}</td>
+          <td data-label="Payment">{{ expense.get_payment_method_display }}</td>
+          <td data-label="Receipt">{{ expense.receipt_number|default:"-" }}</td>
+          <td data-label="Amount"><strong>UGX {{ expense.amount|floatformat:0|intcomma }}</strong></td>
+          <td data-label="Action">
+            <div class="row-actions">
+              <a class="text-link" data-modal-url="{% url 'expenses:edit' expense.pk %}" href="{% url 'expenses:edit' expense.pk %}">Edit</a>
+              <a class="text-link text-danger" href="{% url 'expenses:delete' expense.pk %}">Delete</a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8">No expenses found for this filter.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if page_obj.has_other_pages %}
+  <div class="pagination">
+    {% if page_obj.has_previous %}<a class="button button-secondary" href="?page={{ page_obj.previous_page_number }}&q={{ filter_q }}&category={{ filter_category }}&payment_method={{ filter_payment_method }}&start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}">← Prev</a>{% endif %}
+    <span class="pagination-info">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}<a class="button button-secondary" href="?page={{ page_obj.next_page_number }}&q={{ filter_q }}&category={{ filter_category }}&payment_method={{ filter_payment_method }}&start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}">Next →</a>{% endif %}
+  </div>
+  {% endif %}
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  const input = document.querySelector('[data-expense-search]');
+  const rows = Array.from(document.querySelectorAll('[data-expense-row]'));
+  if (!input || !rows.length) return;
+  input.addEventListener('input', function () {
+    const term = input.value.trim().toLowerCase();
+    rows.forEach(function (row) {
+      row.hidden = term && !row.textContent.toLowerCase().includes(term);
+    });
+  });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Delete Expense{% endblock %}
+{% block page_title %}Delete Expense{% endblock %}
+
+{% block content %}
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <p class="eyebrow">Confirm Delete</p>
+      <h2>{{ expense.title }}</h2>
+      <p>This will remove UGX {{ expense.amount|floatformat:0|intcomma }} from the expenses records.</p>
+    </div>
+  </div>
+  <form method="post" class="inline-form">
+    {% csrf_token %}
+    <a class="button button-secondary" href="{% url 'expenses:list' %}">Cancel</a>
+    <button class="button button-danger" type="submit">Delete Expense</button>
+  </form>
+</section>
+{% endblock %}

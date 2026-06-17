@@ -1,0 +1,293 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block page_header %}
+<header class="page-header">
+  <div>
+    <p class="eyebrow">{{ today|date:"l, d M Y" }}</p>
+    <h1>Today's Salon Pulse</h1>
+  </div>
+  <div class="page-actions">
+    <a class="button button-primary" href="{% url 'sales:create' %}">Record Service</a>
+    <a class="button button-primary" href="{% url 'inventory:product_sale_create' %}">Sell Product</a>
+    <a class="button button-secondary" href="#appointments" data-prevent-nav data-toast="Appointments module is coming next.">Add Appointment</a>
+    <a class="button button-secondary" href="{% url 'expenses:create' %}">Add Expense</a>
+    <a class="button button-secondary" href="{% url 'reports:daily' %}">Daily Report</a>
+  </div>
+</header>
+{% endblock %}
+
+{% block content %}
+
+<section class="stats-grid" aria-label="Dashboard metrics">
+  <article class="stat-card accent-copper">
+    <span class="stat-label">Today Revenue</span>
+    <strong>UGX {{ today_revenue|floatformat:0|intcomma }}</strong>
+    <small>Services UGX {{ today_service_revenue|floatformat:0|intcomma }} · Products UGX {{ today_product_revenue|floatformat:0|intcomma }}</small>
+  </article>
+  <article class="stat-card accent-green">
+    <span class="stat-label">Net Profit</span>
+    <strong>UGX {{ today_net_revenue|floatformat:0|intcomma }}</strong>
+    <small>After commission + expenses</small>
+  </article>
+  <article class="stat-card accent-blue">
+    <span class="stat-label">Commission</span>
+    <strong>UGX {{ today_commission|floatformat:0|intcomma }}</strong>
+    <small>Support UGX {{ today_support_commission|floatformat:0|intcomma }}</small>
+  </article>
+  <article class="stat-card">
+    <span class="stat-label">Today Cash</span>
+    <strong>UGX {{ today_cash_revenue|floatformat:0|intcomma }}</strong>
+    <small>Approved cash sales</small>
+  </article>
+  <article class="stat-card accent-blue">
+    <span class="stat-label">Today Mobile Money</span>
+    <strong>UGX {{ today_mobile_money_revenue|floatformat:0|intcomma }}</strong>
+    <small>Approved mobile money sales</small>
+  </article>
+  <article class="stat-card">
+    <span class="stat-label">Active Customers</span>
+    <strong>{{ customer_count }}</strong>
+    <small>Total profiles</small>
+  </article>
+  <article class="stat-card">
+    <span class="stat-label">Walk-ins Today</span>
+    <strong>{{ today_walk_in_count }}</strong>
+    <small>No customer profile</small>
+  </article>
+  <article class="stat-card">
+    <span class="stat-label">Monthly Revenue</span>
+    <strong>UGX {{ month_revenue|floatformat:0|intcomma }}</strong>
+    <small>{{ month_growth_label }}</small>
+  </article>
+  <article class="stat-card">
+    <span class="stat-label">Today Appointments</span>
+    <strong>{{ today_appointments_count }}</strong>
+    <small>Calendar module pending</small>
+  </article>
+  <article class="stat-card">
+    <span class="stat-label">Today Expenses</span>
+    <strong>UGX {{ today_expenses|floatformat:0|intcomma }}</strong>
+    <small>Operational costs</small>
+  </article>
+</section>
+
+<section class="hero" aria-label="Quick actions">
+  <div>
+    <p class="eyebrow">Quick Actions</p>
+    <h2>Jump to a task</h2>
+    <p class="hero-copy">Record a sale, add a customer, or generate a report without navigating the sidebar.</p>
+  </div>
+  <div class="hero-meta">
+    <a class="hero-meta" href="{% url 'sales:create' %}"><span>Record Service</span></a>
+    <a class="hero-meta" href="{% url 'inventory:product_sale_create' %}"><span>Sell Product</span></a>
+    <a class="hero-meta" href="#appointments" data-prevent-nav data-toast="Appointments module is coming next."><span>Add Appointment</span></a>
+    <a class="hero-meta" href="{% url 'customers:create' %}"><span>Add Customer</span></a>
+    <a class="hero-meta" href="{% url 'expenses:create' %}"><span>Add Expense</span></a>
+    <a class="hero-meta" href="{% url 'reports:daily' %}"><span>Generate Report</span></a>
+  </div>
+</section>
+
+<div class="two-column">
+  <article class="panel">
+    <div class="panel-header">
+      <div>
+        <p class="eyebrow">Revenue Analytics</p>
+        <h2>Revenue Trend</h2>
+      </div>
+      <a class="text-link" href="{% url 'reports:daily' %}">Open report</a>
+    </div>
+    <div class="dashboard-revenue-list">
+      <div class="dashboard-revenue-row">
+        <div>
+          <span class="dashboard-date">Today</span>
+          <strong>UGX {{ today_revenue|floatformat:0|intcomma }}</strong>
+          <small class="field-note">Services {{ today_service_revenue|floatformat:0|intcomma }} · Products {{ today_product_revenue|floatformat:0|intcomma }}</small>
+        </div>
+        <div>
+          <span class="dashboard-date">Net Profit</span>
+          <strong>UGX {{ today_net_revenue|floatformat:0|intcomma }}</strong>
+        </div>
+      </div>
+      <div class="dashboard-revenue-row">
+        <div>
+          <span class="dashboard-date">This Week</span>
+          <strong>UGX {{ week_revenue|floatformat:0|intcomma }}</strong>
+          <small class="field-note">Services {{ week_service_revenue|floatformat:0|intcomma }} · Products {{ week_product_revenue|floatformat:0|intcomma }}</small>
+        </div>
+        <div>
+          <span class="dashboard-date">Net Profit</span>
+          <strong>UGX {{ week_net_revenue|floatformat:0|intcomma }}</strong>
+        </div>
+      </div>
+      <div class="dashboard-revenue-row">
+        <div>
+          <span class="dashboard-date">This Month</span>
+          <strong>UGX {{ month_revenue|floatformat:0|intcomma }}</strong>
+          <small class="field-note">Services {{ month_service_revenue|floatformat:0|intcomma }} · Products {{ month_product_revenue|floatformat:0|intcomma }}</small>
+        </div>
+        <div>
+          <span class="dashboard-date">Net Profit</span>
+          <strong>UGX {{ month_net_revenue|floatformat:0|intcomma }}</strong>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <aside class="dashboard-side-stack">
+    <article class="panel">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">This Month</p>
+          <h2>Top Employee</h2>
+        </div>
+        <a class="text-link" href="{% url 'reports:employees' %}">Report</a>
+      </div>
+      {% if top_employee %}
+      <div class="dashboard-leader">
+        <div>
+          <span class="employee-thumb-placeholder">{{ top_employee.employee__name|slice:":1"|upper }}</span>
+          <strong>{{ top_employee.employee__name }}</strong>
+          <span>{{ top_employee.jobs_done }} jobs</span>
+        </div>
+        <dl>
+          <div>
+            <dt>Sales</dt>
+            <dd>UGX {{ top_employee.total_sales|floatformat:0|intcomma }}</dd>
+          </div>
+          <div>
+            <dt>Commission</dt>
+            <dd>UGX {{ top_employee.total_commission|floatformat:0|intcomma }}</dd>
+          </div>
+        </dl>
+      </div>
+      {% else %}
+      <p class="empty-state">No employee performance data yet.</p>
+      {% endif %}
+    </article>
+
+    <article class="panel">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">This Month</p>
+          <h2>Top Service</h2>
+        </div>
+        <a class="text-link" href="{% url 'reports:services' %}">Report</a>
+      </div>
+      {% if top_service %}
+      <div class="dashboard-leader">
+        <div>
+          <span class="employee-thumb-placeholder">VC</span>
+          <strong>{{ top_service.service__name }}</strong>
+          <span>{{ top_service.jobs_done }} jobs</span>
+        </div>
+        <dl>
+          <div>
+            <dt>Revenue</dt>
+            <dd>UGX {{ top_service.total_sales|floatformat:0|intcomma }}</dd>
+          </div>
+          <div>
+            <dt>Share</dt>
+            <dd>{{ top_service_share|floatformat:0 }}%</dd>
+          </div>
+        </dl>
+      </div>
+      {% else %}
+      <p class="empty-state">No service performance data yet.</p>
+      {% endif %}
+    </article>
+  </aside>
+</div>
+
+{% if recent_product_sales %}
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <p class="eyebrow">Retail</p>
+      <h2>Recent Product Sales</h2>
+    </div>
+    <a class="text-link" href="{% url 'inventory:product_sales' %}">Open product sales</a>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr><th>Date</th><th>Product</th><th>Customer</th><th>Qty</th><th>Total</th></tr>
+      </thead>
+      <tbody>
+        {% for product_sale in recent_product_sales %}
+        <tr>
+          <td data-label="Date">{{ product_sale.sale_date|date:"d M Y" }}</td>
+          <td data-label="Product"><strong>{{ product_sale.product.name }}</strong></td>
+          <td data-label="Customer">{{ product_sale.customer|default:"Walk-in" }}</td>
+          <td data-label="Qty">{{ product_sale.quantity }}</td>
+          <td data-label="Total">UGX {{ product_sale.total_amount|floatformat:0|intcomma }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+<section class="panel" data-dashboard-table data-page-size="8">
+  <div class="panel-header">
+    <div>
+      <p class="eyebrow">Recent Activity</p>
+      <h2>Latest Transactions</h2>
+    </div>
+    <div class="inline-form">
+      <div class="field compact">
+        <input type="search" placeholder="Search..." data-dashboard-table-search>
+      </div>
+      <div class="field compact">
+        <select data-dashboard-table-status aria-label="Filter by status">
+          <option value="all">All</option>
+          <option value="completed">Completed</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Employee</th>
+          <th>Service</th>
+          <th>Customer</th>
+          <th>Amount</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for sale in recent_sales %}
+        <tr data-dashboard-row data-status="completed">
+          <td data-label="Time">{{ sale.created_at|date:"d M Y H:i" }}</td>
+          <td data-label="Employee">{{ sale.employee_summary }}</td>
+          <td data-label="Service">{{ sale.service_summary }}</td>
+          <td data-label="Customer">{{ sale.customer|default:"Walk-in" }}</td>
+          <td data-label="Amount">UGX {{ sale.amount|floatformat:0|intcomma }}</td>
+          <td data-label="Status"><span class="badge badge-success">Completed</span></td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6">No sales have been recorded yet.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="empty-state" data-dashboard-empty hidden>No matching transactions.</p>
+  </div>
+
+  <div class="pagination">
+    <button class="button button-secondary" type="button" data-page-prev>← Prev</button>
+    <span class="pagination-info" data-page-count>Page 1 of 1</span>
+    <button class="button button-secondary" type="button" data-page-next>Next →</button>
+  </div>
+</section>
+
+{% endblock %}

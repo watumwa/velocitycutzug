@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% load humanize tz %}
+
+{% block title %}Pending Approvals{% endblock %}
+{% block page_title %}Pending Approvals{% endblock %}
+
+{% block actions %}
+<a class="button button-secondary" href="{% url 'sales:list' %}">All Sales</a>
+<a class="button button-primary" data-modal-url="{% url 'sales:create' %}" href="{% url 'sales:create' %}">Record Sale</a>
+{% endblock %}
+
+{% block content %}
+<section class="stats-grid">
+  <article class="stat-card accent-copper">
+    <span class="stat-label">Waiting Approval</span>
+    <strong>{{ pending_count }}</strong>
+    <small>Employee-submitted services</small>
+  </article>
+  <article class="stat-card">
+    <span class="stat-label">Pending Value</span>
+    <strong>UGX {{ pending_total|floatformat:0|intcomma }}</strong>
+    <small>Not counted until approved</small>
+  </article>
+  <article class="stat-card accent-blue">
+    <span class="stat-label">Submitted Today</span>
+    <strong>{{ today_pending_count }}</strong>
+    <small>Review before daily closeout</small>
+  </article>
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <p class="eyebrow">Approval Queue</p>
+      <h2>Confirm service and payment</h2>
+      <p>Support employee is selected by the main employee during submission. Approve only after confirming the customer has paid.</p>
+    </div>
+  </div>
+
+  <div class="approval-card-grid">
+    {% for sale in pending_sales %}
+    <article class="approval-card">
+      <div class="approval-card-head">
+        <div>
+          <span class="badge badge-muted">{{ sale.created_at|localtime|date:"d M Y H:i" }}</span>
+          <h3>{{ sale.service_summary }}</h3>
+          <p>{{ sale.employee_summary }} · {{ sale.customer|default:"Walk-in" }}</p>
+        </div>
+        <strong>UGX {{ sale.amount|floatformat:0|intcomma }}</strong>
+      </div>
+
+      <div class="approval-item-list">
+        {% for item in sale.sale_items %}
+        <div class="approval-item">
+          <div>
+            <strong>{{ item.service.name }}</strong>
+            <small>Main: {{ item.employee.name|default:"Unassigned" }} · UGX {{ item.price|floatformat:0|intcomma }}</small>
+          </div>
+          {% if item.service.support_commission_enabled %}
+            {% if item.support_employee %}
+            <span>Support: {{ item.support_employee.name }} · UGX {{ item.service.support_commission_amount|floatformat:0|intcomma }}</span>
+            {% else %}
+            <span>No support selected</span>
+            {% endif %}
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+
+      <form method="post" action="{% url 'sales:approve' sale.pk %}" class="approval-decision-form">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{% url 'sales:pending' %}">
+        <div class="field compact">
+          <label>Payment method</label>
+          <select name="payment_method" required>
+            {% for value,label in payment_method_choices %}
+            <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="approval-actions">
+          <button class="button button-primary" type="submit">Approve Sale</button>
+        </div>
+      </form>
+
+      <form method="post" action="{% url 'sales:reject' sale.pk %}" class="approval-reject-form">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{% url 'sales:pending' %}">
+        <button class="text-link text-danger" type="submit">Reject submission</button>
+      </form>
+    </article>
+    {% empty %}
+    <div class="empty-state approval-empty-state">
+      <strong>No pending approvals.</strong>
+      <p>All employee submissions have been reviewed.</p>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% include "includes/pagination.html" %}
+</section>
+{% endblock %}

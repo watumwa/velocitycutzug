@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}{{ employee.name }}{% endblock %}
+{% block page_title %}{{ employee.name }}{% endblock %}
+
+{% block actions %}
+<a class="button button-secondary" href="{% url 'employees:list' %}">Back to Employees</a>
+<a class="button button-primary" data-modal-url="{% url 'employees:edit' employee.pk %}" href="{% url 'employees:edit' employee.pk %}">Edit Employee</a>
+{% endblock %}
+
+{% block content %}
+<section class="employee-detail-hero panel">
+  <div class="employee-detail-profile">
+    {% if employee.photo %}
+    <img src="{{ employee.photo.url }}" alt="{{ employee.name }}">
+    {% else %}
+    <span>{{ employee.name|slice:":1"|upper }}</span>
+    {% endif %}
+    <div>
+      <p class="eyebrow">Employee Profile</p>
+      <h2>{{ employee.name }}</h2>
+      <p>{{ employee.role.name|default:"Employee" }}{% if employee.department %} · {{ employee.department.name }}{% endif %}</p>
+      <div class="employee-detail-badges">
+        {% if employee.is_active %}<span class="badge badge-success">Active</span>{% else %}<span class="badge badge-muted">Inactive</span>{% endif %}
+        {% if employee.must_change_password %}<span class="badge badge-danger">Must change password</span>{% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="employee-detail-login">
+    <span>Login Username</span>
+    <strong>{{ employee.user.username|default:"No account" }}</strong>
+    <small>Default password for newly created accounts is 123, then password change is enforced.</small>
+  </div>
+</section>
+
+<section class="stats-grid">
+  <article class="stat-card accent-copper">
+    <span class="stat-label">Today Sales</span>
+    <strong>UGX {{ today_sales|floatformat:0|intcomma }}</strong>
+    <small>{{ today_jobs }} job{{ today_jobs|pluralize }}</small>
+  </article>
+  <article class="stat-card accent-blue">
+    <span class="stat-label">Today Commission</span>
+    <strong>UGX {{ today_commission|floatformat:0|intcomma }}</strong>
+    <small>Approved services only</small>
+  </article>
+  <article class="stat-card accent-green">
+    <span class="stat-label">Month Commission</span>
+    <strong>UGX {{ month_commission|floatformat:0|intcomma }}</strong>
+    <small>{{ month_jobs }} job{{ month_jobs|pluralize }}</small>
+  </article>
+  <article class="stat-card">
+    <span class="stat-label">Pending Approval</span>
+    <strong>{{ pending_count }}</strong>
+    <small>{{ rejected_count }} rejected record{{ rejected_count|pluralize }}</small>
+  </article>
+</section>
+
+<div class="employee-detail-grid">
+  <section class="panel employee-detail-card">
+    <div class="panel-header">
+      <div>
+        <p class="eyebrow">Personal & Work Details</p>
+        <h2>Employee Details</h2>
+      </div>
+    </div>
+    <dl class="detail-list">
+      <div><dt>Full Name</dt><dd>{{ employee.name }}</dd></div>
+      <div><dt>Phone</dt><dd>{{ employee.phone|default:"-" }}</dd></div>
+      <div><dt>Identification</dt><dd>{{ employee.identification_display }}</dd></div>
+      <div><dt>Role</dt><dd>{{ employee.role.name|default:"Employee" }}</dd></div>
+      <div><dt>Department</dt><dd>{{ employee.department.name|default:"-" }}</dd></div>
+      <div><dt>Commission Rule</dt><dd>{% if employee.commission_type == "percentage" %}{{ employee.commission_value }}%{% else %}UGX {{ employee.commission_value|floatformat:0|intcomma }}{% endif %}</dd></div>
+      <div><dt>Created</dt><dd>{{ employee.created_at|date:"d M Y H:i" }}</dd></div>
+      <div><dt>Last Updated</dt><dd>{{ employee.updated_at|date:"d M Y H:i" }}</dd></div>
+    </dl>
+  </section>
+
+  <section class="panel employee-detail-card">
+    <div class="panel-header">
+      <div>
+        <p class="eyebrow">Access Control</p>
+        <h2>Services This Employee Can Do</h2>
+        <p>Employee logins only see these services when submitting work.</p>
+      </div>
+    </div>
+    <div class="service-chip-list">
+      {% for service in assigned_services %}
+      <span>{{ service.name }} · UGX {{ service.price|floatformat:0|intcomma }}</span>
+      {% empty %}
+      <p class="empty-state">No services assigned yet.</p>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+
+<div class="two-column">
+  <section class="panel">
+    <div class="panel-header">
+      <div>
+        <p class="eyebrow">Approved Records</p>
+        <h2>Service Breakdown</h2>
+      </div>
+    </div>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>Service</th><th>Jobs</th><th>Sales</th><th>Commission</th></tr>
+        </thead>
+        <tbody>
+          {% for row in service_breakdown %}
+          <tr>
+            <td data-label="Service">{{ row.service__name }}</td>
+            <td data-label="Jobs">{{ row.jobs }}</td>
+            <td data-label="Sales">UGX {{ row.total_sales|floatformat:0|intcomma }}</td>
+            <td data-label="Commission">UGX {{ row.total_commission|floatformat:0|intcomma }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4">No approved service records yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-header">
+      <div>
+        <p class="eyebrow">Lifetime Approved</p>
+        <h2>Performance Summary</h2>
+      </div>
+    </div>
+    <div class="dashboard-revenue-list">
+      <div class="dashboard-revenue-row">
+        <div><span class="dashboard-date">Total Sales</span><strong>UGX {{ all_sales|floatformat:0|intcomma }}</strong></div>
+        <div><span class="dashboard-date">Total Commission</span><strong>UGX {{ all_commission|floatformat:0|intcomma }}</strong></div>
+      </div>
+      <div class="dashboard-revenue-row">
+        <div><span class="dashboard-date">Total Jobs</span><strong>{{ all_jobs }}</strong></div>
+        <div><span class="dashboard-date">Month Sales</span><strong>UGX {{ month_sales|floatformat:0|intcomma }}</strong></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <p class="eyebrow">Audit Trail</p>
+      <h2>Recent Services</h2>
+      <p>Pending/rejected records appear here for review, but only approved records count in commission.</p>
+    </div>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Service</th>
+          <th>Customer</th>
+          <th>Sale Amount</th>
+          <th>Commission</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in recent_items %}
+        <tr>
+          <td data-label="Date">{{ item.sale.created_at|date:"d M Y H:i" }}</td>
+          <td data-label="Service">{{ item.service.name }}</td>
+          <td data-label="Customer">{{ item.sale.customer|default:"Walk-in" }}</td>
+          <td data-label="Sale Amount">UGX {{ item.price|floatformat:0|intcomma }}</td>
+          <td data-label="Commission">UGX {{ item.commission_amount|floatformat:0|intcomma }}</td>
+          <td data-label="Status">
+            {% if item.sale.status == "approved" %}<span class="badge badge-success">Approved</span>
+            {% elif item.sale.status == "pending" %}<span class="badge badge-muted">Pending</span>
+            {% elif item.sale.status == "rejected" %}<span class="badge badge-danger">Rejected</span>
+            {% else %}<span class="badge badge-muted">{{ item.sale.get_status_display }}</span>{% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6">No service records yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

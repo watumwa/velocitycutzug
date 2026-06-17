@@ -1,0 +1,286 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}{% if is_employee_submission %}Submit Service{% elif is_create %}New Sale{% else %}Edit Sale{% endif %}{% endblock %}
+{% block page_title %}{% if is_employee_submission %}Submit Service for Approval{% elif is_create %}New Sale{% else %}Edit Sale{% endif %}{% endblock %}
+
+{% block actions %}
+<a class="button button-secondary" href="{% url 'sales:list' %}">Back</a>
+{% endblock %}
+
+{% block content %}
+<section class="panel form-panel sale-form-shell">
+  <div class="panel-header">
+    <div>
+      {% if is_employee_submission %}
+      <h2>Service Submission</h2>
+      <p>Select the service you worked on. It will stay pending until admin/cashier approves it and confirms payment/support commission.</p>
+      {% else %}
+      <h2>Fast POS Entry</h2>
+      <p>Select services, assign the main employee, optional support employee, and payment method.</p>
+      {% endif %}
+    </div>
+    <div class="sale-form-summary">
+      <span class="badge badge-muted"><strong id="selected-service-count">0</strong>&nbsp;services selected</span>
+    </div>
+  </div>
+
+  <form method="post" id="sale-form">
+    {% csrf_token %}
+    {% if form.errors %}
+    <div class="form-errors">
+      <strong>Form not saved.</strong> Please correct the highlighted fields below.
+      {% if form.non_field_errors %}{{ form.non_field_errors }}{% endif %}
+    </div>
+    {% endif %}
+
+    <div class="field field-wide">
+      <label>{{ form.services.label }}</label>
+      {% if available_services %}
+      <div class="sale-service-grid" id="service-grid">
+        {% for service in available_services %}
+        <label class="sale-service-card {% if service.pk|stringformat:'s' in selected_service_ids %}sale-service-card--selected{% endif %}"
+               data-service-pk="{{ service.pk }}">
+          <input
+            type="checkbox"
+            name="services"
+            value="{{ service.pk }}"
+            data-service-price="{{ service.price|floatformat:0 }}"
+            data-service-name="{{ service.name }}"
+            data-support-enabled="{% if service.support_commission_enabled %}1{% else %}0{% endif %}"
+            data-support-amount="{{ service.support_commission_amount|floatformat:0 }}"
+            {% if service.pk|stringformat:"s" in selected_service_ids %}checked{% endif %}
+          >
+          <div class="sale-service-card-copy">
+            <strong>{{ service.name }}</strong>
+            <span>UGX {{ service.price|floatformat:0|intcomma }}</span>
+            {% if service.support_commission_enabled %}
+            <small class="field-note">Support commission: UGX {{ service.support_commission_amount|floatformat:0|intcomma }}</small>
+            {% endif %}
+          </div>
+        </label>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <p>No services are assigned to your employee profile yet. Ask the admin to edit your employee account and select the services you perform.</p>
+      </div>
+      {% endif %}
+      {% if form.services.help_text %}<small class="field-note">{{ form.services.help_text }}</small>{% endif %}
+      {% for error in form.services.errors %}<small class="error">{{ error }}</small>{% endfor %}
+    </div>
+
+    {% if not is_employee_submission %}
+    <div id="employee-assignments" class="form-grid" style="display:none;">
+      <p class="field field-wide" style="margin:0;">
+        <strong>Assign employees per service</strong>
+        <small class="field-note">Main employee earns the normal commission. Support employee earns the fixed support commission configured on that service.</small>
+      </p>
+    </div>
+    {% endif %}
+
+    <div class="form-grid">
+      <div class="field">
+        <label for="{{ form.customer.id_for_label }}">{{ form.customer.label }}</label>
+        {{ form.customer }}
+        {% for error in form.customer.errors %}<small class="error">{{ error }}</small>{% endfor %}
+      </div>
+      <div class="field">
+        <label for="{{ form.amount.id_for_label }}">{{ form.amount.label }}</label>
+        {{ form.amount }}
+        {% if form.amount.help_text %}<small class="field-note">{{ form.amount.help_text }}</small>{% endif %}
+        {% for error in form.amount.errors %}<small class="error">{{ error }}</small>{% endfor %}
+      </div>
+      {% if form.payment_method %}
+      <div class="field">
+        <label for="{{ form.payment_method.id_for_label }}">{{ form.payment_method.label }}</label>
+        {{ form.payment_method }}
+        {% if form.payment_method.help_text %}<small class="field-note">{{ form.payment_method.help_text }}</small>{% endif %}
+        {% for error in form.payment_method.errors %}<small class="error">{{ error }}</small>{% endfor %}
+      </div>
+      {% endif %}
+      <div class="field">
+        <label for="{{ form.created_at.id_for_label }}">{{ form.created_at.label }}</label>
+        {{ form.created_at }}
+        {% for error in form.created_at.errors %}<small class="error">{{ error }}</small>{% endfor %}
+      </div>
+      <div class="field field-wide">
+        <label for="{{ form.notes.id_for_label }}">{{ form.notes.label }}</label>
+        {{ form.notes }}
+        {% for error in form.notes.errors %}<small class="error">{{ error }}</small>{% endfor %}
+      </div>
+    </div>
+
+    {% for error in form.non_field_errors %}<small class="error">{{ error }}</small>{% endfor %}
+
+    <div class="form-actions">
+      <button class="button button-primary" type="submit" id="sale-submit" {% if not available_services %}disabled{% endif %}>
+        {% if is_employee_submission %}Submit for Approval{% elif is_create %}Record Sale{% else %}Save Changes{% endif %}
+      </button>
+    </div>
+  </form>
+</section>
+
+<script>
+(function () {
+  const checkboxes = Array.from(document.querySelectorAll(".sale-service-card input[type='checkbox']"));
+  const amountInput = document.getElementById("id_amount");
+  const selectedCount = document.getElementById("selected-service-count");
+  const submitBtn = document.getElementById("sale-submit");
+  const form = document.getElementById("sale-form");
+  const shouldAssignEmployees = {% if is_employee_submission %}false{% else %}true{% endif %};
+  const assignBox = document.getElementById("employee-assignments");
+
+  const employeeOptions = [
+    { value: "", label: "— Select employee —" },
+    {% for emp in employees %}{ value: "{{ emp.pk }}", label: "{{ emp.name|escapejs }}" },{% endfor %}
+  ];
+
+  const existingAssignments = {
+    {% for item in existing_items %}
+    "{{ item.service_id }}": {
+      employee: "{{ item.employee_id|default:'' }}",
+      supportEmployee: "{{ item.support_employee_id|default:'' }}",
+      rate: "{{ item.commission_rate|default:'' }}"
+    },
+    {% endfor %}
+  };
+
+  function appendEmployeeOptions(select, selectedValue) {
+    employeeOptions.forEach(function (opt) {
+      const o = document.createElement("option");
+      o.value = opt.value;
+      o.textContent = opt.label;
+      if (String(selectedValue || "") === opt.value) o.selected = true;
+      select.appendChild(o);
+    });
+  }
+
+  function buildSelect(servicePk, serviceName, supportEnabled, supportAmount) {
+    const wrapper = document.createElement("div");
+    wrapper.className = "field field-wide";
+    wrapper.dataset.assignFor = servicePk;
+    wrapper.style.display = "grid";
+    wrapper.style.gap = "0.65rem";
+
+    const title = document.createElement("label");
+    title.textContent = serviceName;
+
+    const row = document.createElement("div");
+    row.style.cssText = "display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0.65rem;";
+
+    const mainWrap = document.createElement("div");
+    mainWrap.className = "field";
+    const mainLabel = document.createElement("label");
+    mainLabel.textContent = "Main employee";
+    const select = document.createElement("select");
+    select.name = "employee_for_" + servicePk;
+    appendEmployeeOptions(select, existingAssignments[servicePk] && existingAssignments[servicePk].employee);
+    mainWrap.appendChild(mainLabel);
+    mainWrap.appendChild(select);
+
+    const supportWrap = document.createElement("div");
+    supportWrap.className = "field";
+    const supportLabel = document.createElement("label");
+    supportLabel.textContent = "Support employee";
+    const supportSelect = document.createElement("select");
+    supportSelect.name = "support_employee_for_" + servicePk;
+    appendEmployeeOptions(supportSelect, existingAssignments[servicePk] && existingAssignments[servicePk].supportEmployee);
+    const supportNote = document.createElement("small");
+    supportNote.className = "field-note";
+    if (supportEnabled) {
+      supportNote.textContent = "Fixed support commission: UGX " + Number(supportAmount || 0).toLocaleString();
+    } else {
+      supportSelect.disabled = true;
+      supportNote.textContent = "No support commission configured for this service.";
+    }
+    supportWrap.appendChild(supportLabel);
+    supportWrap.appendChild(supportSelect);
+    supportWrap.appendChild(supportNote);
+
+    const rateWrap = document.createElement("div");
+    rateWrap.className = "field";
+    const rateLabel = document.createElement("label");
+    rateLabel.textContent = "Main commission % override";
+    const rateInput = document.createElement("input");
+    rateInput.type = "number";
+    rateInput.name = "commission_rate_for_" + servicePk;
+    rateInput.min = "0";
+    rateInput.max = "100";
+    rateInput.step = "0.01";
+    rateInput.placeholder = "Default %";
+    const existing = existingAssignments[servicePk];
+    if (existing && existing.rate) rateInput.value = existing.rate;
+    const rateNote = document.createElement("small");
+    rateNote.className = "field-note";
+    rateNote.textContent = "Blank = default/service rate";
+    rateWrap.appendChild(rateLabel);
+    rateWrap.appendChild(rateInput);
+    rateWrap.appendChild(rateNote);
+
+    row.appendChild(mainWrap);
+    row.appendChild(supportWrap);
+    row.appendChild(rateWrap);
+    wrapper.appendChild(title);
+    wrapper.appendChild(row);
+    return wrapper;
+  }
+
+  function syncAssignments() {
+    if (!shouldAssignEmployees || !assignBox) return;
+    const selected = checkboxes.filter(cb => cb.checked);
+
+    Array.from(assignBox.querySelectorAll("[data-assign-for]")).forEach(function (el) {
+      const pk = el.dataset.assignFor;
+      if (!selected.find(cb => cb.value === pk)) el.remove();
+    });
+
+    selected.forEach(function (cb) {
+      if (!assignBox.querySelector("[data-assign-for='" + cb.value + "']")) {
+        assignBox.appendChild(buildSelect(
+          cb.value,
+          cb.dataset.serviceName,
+          cb.dataset.supportEnabled === "1",
+          cb.dataset.supportAmount
+        ));
+      }
+    });
+
+    assignBox.style.display = selected.length ? "" : "none";
+  }
+
+  function syncAmount() {
+    const selected = checkboxes.filter(cb => cb.checked);
+    const autoTotal = selected.reduce((sum, cb) => sum + Number(cb.dataset.servicePrice || 0), 0);
+    selectedCount.textContent = selected.length;
+
+    checkboxes.forEach(cb => {
+      cb.closest(".sale-service-card").classList.toggle("sale-service-card--selected", cb.checked);
+    });
+
+    const lastAuto = amountInput.dataset.lastAuto || "";
+    if (!amountInput.value || amountInput.value === lastAuto || amountInput.readOnly) {
+      amountInput.value = autoTotal ? String(autoTotal) : "";
+      amountInput.dataset.lastAuto = amountInput.value;
+    }
+  }
+
+  amountInput.addEventListener("input", function () {
+    this.dataset.lastAuto = this.dataset.lastAuto || "";
+  });
+
+  checkboxes.forEach(cb => cb.addEventListener("change", function () {
+    syncAmount();
+    syncAssignments();
+  }));
+
+  form.addEventListener("submit", function () {
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Saving…";
+  });
+
+  syncAmount();
+  syncAssignments();
+})();
+</script>
+{% endblock %}

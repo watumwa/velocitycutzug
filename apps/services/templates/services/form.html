@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<section class="panel form-panel service-editor">
+  <div class="panel-header">
+    <div>
+      {% if is_create %}
+      <h2>Create a custom service</h2>
+      <p>Add a new salon service with pricing, status, and an optional photo for the catalog.</p>
+      {% else %}
+      <h2>{{ service.name }}</h2>
+      {% if is_catalog_service %}
+      <p>This service belongs to your main salon catalog. You can update the price, photo, and availability here.</p>
+      {% else %}
+      <p>Update the custom service details, pricing, photo, and availability.</p>
+      {% endif %}
+      {% endif %}
+    </div>
+    <div class="service-form-summary">
+      {% if service.pk and service.photo %}
+      <img class="service-form-photo" src="{{ service.photo.url }}" alt="{{ service.name|default:'Service photo' }}">
+      {% else %}
+      <span class="badge badge-muted">No photo yet</span>
+      {% endif %}
+      {% if not is_create %}
+      {% if service.price %}
+      <span class="badge badge-muted">Current price: UGX {{ service.price|floatformat:0|intcomma }}</span>
+      {% else %}
+      <span class="badge badge-muted">Current price: not set</span>
+      {% endif %}
+      {% endif %}
+    </div>
+  </div>
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {% if form.errors %}
+    <div class="form-errors">
+      <strong>Form not saved.</strong> Please correct the highlighted fields below.
+      {% if form.non_field_errors %}{{ form.non_field_errors }}{% endif %}
+    </div>
+    {% endif %}
+
+    <div class="form-grid">
+      {% for field in form %}
+      <div class="field {% if field.name == 'photo' %}field-wide{% endif %}">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.name == "photo" %}
+        <small class="field-note">Accepted formats: JPG, JPEG, PNG, WEBP.</small>
+        {% endif %}
+        {% for error in field.errors %}
+        <small class="error">{{ error }}</small>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+    <div class="form-actions">
+      <a class="button button-secondary" href="{% url 'services:list' %}">Back</a>
+      <button class="button button-primary" type="submit">
+        {% if is_create %}Create Service{% else %}Save Changes{% endif %}
+      </button>
+    </div>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,58 @@
+{% load humanize %}
+<div class="panel-header">
+  <div>
+    <p class="eyebrow">{{ product.name }}</p>
+    <h2>Add Stock Entry</h2>
+  </div>
+  <span class="badge {% if product.is_low_stock %}badge-muted{% else %}badge-success{% endif %}">
+    {{ product.current_stock }} {{ product.unit }} in stock
+  </span>
+</div>
+<form method="post" action="{% url 'inventory:stock' product.pk %}">
+  {% csrf_token %}
+    {% if form.errors %}
+    <div class="form-errors">
+      <strong>Form not saved.</strong> Please correct the highlighted fields below.
+      {% if form.non_field_errors %}{{ form.non_field_errors }}{% endif %}
+    </div>
+    {% endif %}
+
+  {{ form.product }}
+  <div class="form-grid">
+    <div class="field">
+      <label for="{{ form.entry_type.id_for_label }}">{{ form.entry_type.label }}</label>
+      {{ form.entry_type }}
+      {% for error in form.entry_type.errors %}<small class="error">{{ error }}</small>{% endfor %}
+    </div>
+    <div class="field">
+      <label for="{{ form.quantity.id_for_label }}">{{ form.quantity.label }}</label>
+      {{ form.quantity }}
+      <small class="field-note">Positive number. Outflow types are converted to stock removal.</small>
+      {% for error in form.quantity.errors %}<small class="error">{{ error }}</small>{% endfor %}
+    </div>
+    <div class="field">
+      <label for="{{ form.unit_cost.id_for_label }}">{{ form.unit_cost.label }}</label>
+      {{ form.unit_cost }}
+    </div>
+    <div class="field">
+      <label for="{{ form.supplier.id_for_label }}">{{ form.supplier.label }}</label>
+      {{ form.supplier }}
+    </div>
+    <div class="field">
+      <label for="{{ form.date.id_for_label }}">{{ form.date.label }}</label>
+      {{ form.date }}
+    </div>
+    <div class="field">
+      <label for="{{ form.create_expense.id_for_label }}">{{ form.create_expense.label }}</label>
+      {{ form.create_expense }}
+      {% if form.create_expense.help_text %}<small class="field-note">{{ form.create_expense.help_text }}</small>{% endif %}
+    </div>
+    <div class="field field-wide">
+      <label for="{{ form.note.id_for_label }}">{{ form.note.label }}</label>
+      {{ form.note }}
+    </div>
+  </div>
+  <div class="form-actions">
+    <button class="button button-primary" type="submit">Save Entry</button>
+  </div>
+</form>

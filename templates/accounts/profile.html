@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% load humanize tz %}
+
+{% block title %}My Profile{% endblock %}
+{% block page_title %}My Profile{% endblock %}
+
+{% block actions %}
+<a class="button button-primary" href="{% url 'accounts:password_change' %}">Change Password</a>
+{% endblock %}
+
+{% block content %}
+<section class="stats-grid">
+  <article class="stat-card accent-copper">
+    <span class="stat-label">Account</span>
+    <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>
+    <small>{{ request.user.username }}</small>
+  </article>
+  <article class="stat-card">
+    <span class="stat-label">Role</span>
+    <strong>
+      {% if request.user.is_superuser %}
+        Superuser
+      {% elif employee and employee.role %}
+        {{ employee.role.name }}
+      {% else %}
+        User
+      {% endif %}
+    </strong>
+    <small>{% if employee.department %}{{ employee.department.name }}{% else %}System account{% endif %}</small>
+  </article>
+  {% if employee %}
+  <article class="stat-card {% if employee.must_change_password %}accent-copper{% else %}accent-green{% endif %}">
+    <span class="stat-label">Password</span>
+    <strong>{% if employee.must_change_password %}Change Needed{% else %}Private{% endif %}</strong>
+    <small>{% if employee.must_change_password %}Please update the default password{% else %}Password has been updated{% endif %}</small>
+  </article>
+  <article class="stat-card accent-blue">
+    <span class="stat-label">Services</span>
+    <strong>{{ assigned_services|length }}</strong>
+    <small>Assigned services</small>
+  </article>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <p class="eyebrow">Account Details</p>
+      <h2>Login information</h2>
+    </div>
+  </div>
+  <div class="highlight-card">
+    <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>
+    <span class="field-note">Username: {{ request.user.username }}</span>
+    <span class="field-note">Last login: {% if request.user.last_login %}{{ request.user.last_login|localtime|date:"d M Y H:i" }}{% else %}Not recorded yet{% endif %}</span>
+    <span class="field-note">Joined: {{ request.user.date_joined|date:"d M Y" }}</span>
+  </div>
+</section>
+
+{% if employee %}
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <p class="eyebrow">Staff Profile</p>
+      <h2>{{ employee.name }}</h2>
+      <p>{{ employee.role.name|default:"Employee" }}{% if employee.department %} · {{ employee.department.name }}{% endif %}</p>
+    </div>
+    {% if employee.photo %}
+      <img class="employee-photo-preview" src="{{ employee.photo.url }}" alt="{{ employee.name }}">
+    {% endif %}
+  </div>
+
+  <div class="form-grid">
+    <div class="highlight-card">
+      <span class="service-entry-label">Phone</span>
+      <strong>{{ employee.phone|default:"-" }}</strong>
+    </div>
+    <div class="highlight-card">
+      <span class="service-entry-label">Identification</span>
+      <strong>{{ employee.identification_display }}</strong>
+    </div>
+    <div class="highlight-card">
+      <span class="service-entry-label">Commission</span>
+      <strong>
+        {% if employee.commission_type == "percentage" %}
+          {{ employee.commission_value }}%
+        {% else %}
+          UGX {{ employee.commission_value|floatformat:0|intcomma }}
+        {% endif %}
+      </strong>
+    </div>
+    <div class="highlight-card">
+      <span class="service-entry-label">Status</span>
+      <strong>{% if employee.is_active %}Active{% else %}Inactive{% endif %}</strong>
+    </div>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <p class="eyebrow">Assigned Services</p>
+      <h2>Services you can submit</h2>
+    </div>
+  </div>
+  <div class="service-showcase-meta">
+    {% for service in assigned_services %}
+      <span>{{ service.name }}</span>
+    {% empty %}
+      <span>No services assigned yet</span>
+    {% endfor %}
+  </div>
+</section>
+{% else %}
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <p class="eyebrow">System Account</p>
+      <h2>No employee profile linked</h2>
+      <p>This login is not connected to an employee record. You can still manage your password from this page.</p>
+    </div>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Stock — {{ product.name }}{% endblock %}
+{% block page_title %}{{ product.name }}{% endblock %}
+
+{% block actions %}
+<a class="button button-secondary" href="{% url 'inventory:list' %}">Back to Inventory</a>
+{% if product.can_be_sold %}<a class="button button-primary" href="{% url 'inventory:sell' product.pk %}">Sell Product</a>{% endif %}
+{% endblock %}
+
+{% block content %}
+
+<section class="stats-grid">
+  <article class="stat-card {% if product.is_low_stock %}accent-copper{% else %}accent-green{% endif %}">
+    <span class="stat-label">Current Stock</span>
+    <strong>{{ product.current_stock }} {{ product.unit }}</strong>
+    <small>Threshold: {{ product.low_stock_threshold }} {{ product.unit }}</small>
+  </article>
+  <article class="stat-card">
+    <span class="stat-label">Type</span>
+    <strong>{{ product.get_product_type_display }}</strong>
+    <small>{{ product.get_category_display }}</small>
+  </article>
+  <article class="stat-card">
+    <span class="stat-label">Cost Value</span>
+    <strong>UGX {{ product.stock_cost_value|floatformat:0|intcomma }}</strong>
+    <small>Buying price: UGX {{ product.buying_price|floatformat:0|intcomma }}</small>
+  </article>
+  <article class="stat-card">
+    <span class="stat-label">Retail Value</span>
+    <strong>UGX {{ product.stock_retail_value|floatformat:0|intcomma }}</strong>
+    <small>Selling price: UGX {{ product.selling_price|floatformat:0|intcomma }}</small>
+  </article>
+</section>
+
+<div class="two-column">
+
+  <section class="panel form-panel">
+    <div class="panel-header">
+      <div>
+        <p class="eyebrow">Stock Movement</p>
+        <h2>Add Entry</h2>
+        <p>Restocks can automatically create an expense. Stock-out types remove stock from the quantity available.</p>
+      </div>
+    </div>
+    <form method="post">
+      {% csrf_token %}
+    {% if form.errors %}
+    <div class="form-errors">
+      <strong>Form not saved.</strong> Please correct the highlighted fields below.
+      {% if form.non_field_errors %}{{ form.non_field_errors }}{% endif %}
+    </div>
+    {% endif %}
+
+      {{ form.product }}
+      <div class="form-grid">
+        <div class="field">
+          <label for="{{ form.entry_type.id_for_label }}">{{ form.entry_type.label }}</label>
+          {{ form.entry_type }}
+          {% for error in form.entry_type.errors %}<small class="error">{{ error }}</small>{% endfor %}
+        </div>
+        <div class="field">
+          <label for="{{ form.quantity.id_for_label }}">{{ form.quantity.label }}</label>
+          {{ form.quantity }}
+          <small class="field-note">Enter a positive number. The system removes stock automatically for usage/lost/damaged/sold entries.</small>
+          {% for error in form.quantity.errors %}<small class="error">{{ error }}</small>{% endfor %}
+        </div>
+        <div class="field">
+          <label for="{{ form.unit_cost.id_for_label }}">{{ form.unit_cost.label }}</label>
+          {{ form.unit_cost }}
+          {% for error in form.unit_cost.errors %}<small class="error">{{ error }}</small>{% endfor %}
+        </div>
+        <div class="field">
+          <label for="{{ form.supplier.id_for_label }}">{{ form.supplier.label }}</label>
+          {{ form.supplier }}
+        </div>
+        <div class="field">
+          <label for="{{ form.date.id_for_label }}">{{ form.date.label }}</label>
+          {{ form.date }}
+          {% for error in form.date.errors %}<small class="error">{{ error }}</small>{% endfor %}
+        </div>
+        <div class="field">
+          <label for="{{ form.create_expense.id_for_label }}">{{ form.create_expense.label }}</label>
+          {{ form.create_expense }}
+          {% if form.create_expense.help_text %}<small class="field-note">{{ form.create_expense.help_text }}</small>{% endif %}
+        </div>
+        <div class="field field-wide">
+          <label for="{{ form.note.id_for_label }}">{{ form.note.label }}</label>
+          {{ form.note }}
+          {% for error in form.note.errors %}<small class="error">{{ error }}</small>{% endfor %}
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="button button-primary" type="submit">Save Entry</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel">
+    <div class="panel-header">
+      <div>
+        <p class="eyebrow">Recent</p>
+        <h2>Stock History</h2>
+      </div>
+    </div>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>Date</th><th>Type</th><th>Qty</th><th>Cost</th><th>Expense</th><th>Note</th></tr>
+        </thead>
+        <tbody>
+          {% for entry in history %}
+          <tr>
+            <td data-label="Date">{{ entry.date|date:"d M Y" }}</td>
+            <td data-label="Type">
+              <span class="badge {% if entry.quantity > 0 %}badge-success{% else %}badge-muted{% endif %}">
+                {{ entry.get_entry_type_display }}
+              </span>
+            </td>
+            <td data-label="Qty">
+              {% if entry.quantity > 0 %}+{% endif %}{{ entry.quantity }} {{ product.unit }}
+            </td>
+            <td data-label="Cost">{% if entry.total_cost %}UGX {{ entry.total_cost|floatformat:0|intcomma }}{% else %}-{% endif %}</td>
+            <td data-label="Expense">{% if entry.related_expense %}<span class="badge badge-success">Recorded</span>{% else %}-{% endif %}</td>
+            <td data-label="Note">{{ entry.note|default:"—" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6">No entries yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</div>
+{% endblock %}

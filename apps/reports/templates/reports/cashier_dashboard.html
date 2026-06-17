@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% load humanize tz %}
+
+{% block title %}Cashier Dashboard{% endblock %}
+{% block page_title %}Cashier Dashboard{% endblock %}
+
+{% block page_header %}
+<header class="page-header role-dashboard-header">
+  <div>
+    <p class="eyebrow">{{ today|date:"l, d M Y" }} · {{ role_label }}</p>
+    <h1>Today’s Work Counter</h1>
+    <p class="page-subtitle">Record sales, approve submitted services and close the day from one counter view.</p>
+  </div>
+  <div class="page-actions">
+    <a class="button button-primary" data-modal-url="{% url 'sales:create' %}" href="{% url 'sales:create' %}">Record Service</a>
+    <a class="button button-secondary" data-modal-url="{% url 'inventory:product_sale_create' %}" href="{% url 'inventory:product_sale_create' %}">Sell Product</a>
+  </div>
+</header>
+{% endblock %}
+
+{% block content %}
+
+<section class="dashboard-command-grid" aria-label="Cashier dashboard summary">
+  <article class="stat-card accent-copper">
+    <span class="stat-label">Today Collected</span>
+    <strong>UGX {{ today_revenue|floatformat:0|intcomma }}</strong>
+    <small>Cash {{ today_cash_revenue|floatformat:0|intcomma }} · Mobile {{ today_mobile_money_revenue|floatformat:0|intcomma }}</small>
+  </article>
+  <article class="stat-card accent-blue">
+    <span class="stat-label">Service Sales</span>
+    <strong>{{ cashier_service_count }}</strong>
+    <small>All services today: UGX {{ today_service_revenue|floatformat:0|intcomma }}</small>
+  </article>
+  <article class="stat-card accent-green">
+    <span class="stat-label">Product Sales</span>
+    <strong>{{ cashier_product_count }}</strong>
+    <small>Your product sales: UGX {{ cashier_product_revenue|floatformat:0|intcomma }}</small>
+  </article>
+  <article class="stat-card {% if pending_approval_count %}accent-dark{% endif %}">
+    <span class="stat-label">Pending Approvals</span>
+    <strong>{{ pending_approval_count }}</strong>
+    <small>Employee submissions waiting</small>
+  </article>
+</section>
+
+<section class="panel dashboard-workspace">
+  <div class="dashboard-workspace-actions">
+    <a class="button button-primary" data-modal-url="{% url 'sales:create' %}" href="{% url 'sales:create' %}">Record Service</a>
+    <a class="button button-secondary" data-modal-url="{% url 'inventory:product_sale_create' %}" href="{% url 'inventory:product_sale_create' %}">Sell Product</a>
+    <a class="button button-secondary" href="{% url 'sales:pending' %}">Approvals{% if pending_approval_count %} ({{ pending_approval_count }}){% endif %}</a>
+    <a class="button button-secondary" href="{% url 'reports:daily' %}">Daily Closeout</a>
+  </div>
+  <div class="dashboard-ops-strip">
+    <div>
+      <span>Commission Counted</span>
+      <strong>UGX {{ today_commission|floatformat:0|intcomma }}</strong>
+      <small>Support UGX {{ today_support_commission|floatformat:0|intcomma }}</small>
+    </div>
+    <div>
+      <span>Transactions</span>
+      <strong>{{ today_transaction_count }}</strong>
+      <small>{{ today_walk_in_count }} walk-ins</small>
+    </div>
+    <div>
+      <span>Products Sold</span>
+      <strong>{{ products_sold_count }}</strong>
+      <small>Retail units today</small>
+    </div>
+    <div>
+      <span>Stock Alerts</span>
+      <strong>{{ inventory_alert_count }}</strong>
+      <small>Items need attention</small>
+    </div>
+  </div>
+</section>
+
+<div class="two-column">
+  <article class="panel">
+    <div class="panel-header">
+      <div>
+        <p class="eyebrow">Your Counter Activity</p>
+        <h2>Recent service work</h2>
+      </div>
+      <a class="text-link" href="{% url 'sales:list' %}">Open sales</a>
+    </div>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>Time</th><th>Employee</th><th>Service</th><th>Amount</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for sale in cashier_recent_sales %}
+          <tr>
+            <td data-label="Time">{{ sale.created_at|localtime|date:"d M H:i" }}</td>
+            <td data-label="Employee">{{ sale.employee_summary }}</td>
+            <td data-label="Service">{{ sale.service_summary }}</td>
+            <td data-label="Amount">UGX {{ sale.amount|floatformat:0|intcomma }}</td>
+            <td data-label="Status"><span class="badge badge-success">{{ sale.get_status_display }}</span></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5">No service activity recorded by you yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+
+  <aside class="dashboard-side-stack">
+    <article class="panel">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">Closeout</p>
+          <h2>Payment split</h2>
+        </div>
+        <a class="text-link" href="{% url 'reports:daily' %}">Daily report</a>
+      </div>
+      <div class="dashboard-revenue-list">
+        <div class="dashboard-revenue-row">
+          <div><span class="dashboard-date">Cash</span><strong>UGX {{ today_cash_revenue|floatformat:0|intcomma }}</strong></div>
+          <div><span class="dashboard-date">Mobile</span><strong>UGX {{ today_mobile_money_revenue|floatformat:0|intcomma }}</strong></div>
+        </div>
+        <div class="dashboard-revenue-row">
+          <div><span class="dashboard-date">Services</span><strong>UGX {{ today_service_revenue|floatformat:0|intcomma }}</strong></div>
+          <div><span class="dashboard-date">Products</span><strong>UGX {{ today_product_revenue|floatformat:0|intcomma }}</strong></div>
+        </div>
+      </div>
+    </article>
+
+    <article class="panel">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">Retail</p>
+          <h2>Your product sales</h2>
+        </div>
+        <a class="text-link" href="{% url 'inventory:product_sales' %}">Open retail</a>
+      </div>
+      <div class="dashboard-revenue-list">
+        {% for product_sale in cashier_recent_product_sales %}
+        <div class="dashboard-revenue-row">
+          <div>
+            <span class="dashboard-date">{{ product_sale.sale_date|date:"d M" }}</span>
+            <strong>{{ product_sale.product.name }}</strong>
+            <small class="field-note">{{ product_sale.quantity }} × UGX {{ product_sale.unit_price|floatformat:0|intcomma }}</small>
+          </div>
+          <div>
+            <span class="dashboard-date">Total</span>
+            <strong>UGX {{ product_sale.total_amount|floatformat:0|intcomma }}</strong>
+          </div>
+        </div>
+        {% empty %}
+        <p class="empty-state">No product sales recorded by you yet.</p>
+        {% endfor %}
+      </div>
+    </article>
+  </aside>
+</div>
+
+{% endblock %}

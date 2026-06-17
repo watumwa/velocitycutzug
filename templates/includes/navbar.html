@@ -1,0 +1,41 @@
+{% load humanize %}
+<div class="topbar">
+  <div class="topbar-meta">
+    <span class="topbar-label">Velocity Cutz</span>
+    <span data-live-clock>{% now "D, d M H:i" %}</span>
+  </div>
+
+  <div class="topbar-right">
+    {% if request.user.is_authenticated %}
+      {% if pending_approval_count %}
+      <div class="approval-notification" data-pending-approval-widget data-initial-pending-count="{{ pending_approval_count }}" data-latest-pending-id="{{ latest_pending_sale_id }}">
+        <a class="approval-bell" href="{% url 'sales:list' %}?status=pending" aria-label="{{ pending_approval_count }} pending sale approval{{ pending_approval_count|pluralize }}">
+          <span class="approval-bell-icon" aria-hidden="true">🔔</span>
+          <span class="approval-bell-text">Approvals</span>
+          <strong>{{ pending_approval_count }}</strong>
+        </a>
+        <div class="approval-dropdown">
+          <div class="approval-dropdown-head">
+            <strong>Pending approvals</strong>
+            <span>UGX {{ pending_approval_total|floatformat:0|intcomma }}</span>
+          </div>
+          {% for sale in pending_approval_sales %}
+          <a class="approval-mini-card" href="{% url 'sales:list' %}?status=pending">
+            <span>{{ sale.employee_summary }}</span>
+            <small>{{ sale.service_summary }} · UGX {{ sale.amount|floatformat:0|intcomma }}</small>
+          </a>
+          {% empty %}
+          <p class="approval-empty">No pending sale approvals.</p>
+          {% endfor %}
+          <a class="approval-review-link" href="{% url 'sales:list' %}?status=pending">Review all pending sales →</a>
+        </div>
+      </div>
+      {% endif %}
+    <span class="topbar-user">{{ request.user.get_full_name|default:request.user.username }}</span>
+    <form method="post" action="{% url 'accounts:logout' %}" class="topbar-logout-form">
+      {% csrf_token %}
+      <button class="button button-secondary topbar-logout" type="submit">Logout</button>
+    </form>
+    {% endif %}
+  </div>
+</div>

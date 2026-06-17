@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Service Catalog{% endblock %}
+
+{% block page_title %}Service Catalog{% endblock %}
+
+{% block actions %}
+<a class="button button-primary" data-modal-url="{% url 'services:create' %}" href="{% url 'services:create' %}">Add Service</a>
+{% endblock %}
+
+{% block content %}
+<section class="hero service-hero">
+  <div>
+    <p class="eyebrow">Salon Menu</p>
+    <h2>Curated services with room for your own custom additions</h2>
+    <p class="hero-copy">Keep the main salon catalog polished, attach service photos, and still create special items whenever your menu grows.</p>
+  </div>
+  <div class="hero-meta">
+    <span>{{ total_services }} core services</span>
+    <span>{{ active_services }} active</span>
+    <span>{{ priced_services }} priced</span>
+    <span>{{ custom_service_count }} custom services</span>
+  </div>
+</section>
+
+<section class="service-catalog-grid">
+  {% for section in service_sections %}
+  <article class="service-showcase">
+    <div class="service-showcase-header">
+      <div>
+        <p class="eyebrow">{{ section.service_count }} services</p>
+        <h2>{{ section.title }}</h2>
+      </div>
+      <div class="service-showcase-meta">
+        <span>{{ section.active_count }} active</span>
+        <span>{{ section.priced_count }} priced</span>
+        {% if section.unpriced_count %}
+        <span>{{ section.unpriced_count }} pending price</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="service-card-grid">
+      {% for entry in section.services %}
+      <article class="service-entry-card">
+        <div class="service-entry-media">
+          {% if entry.service.photo %}
+          <img src="{{ entry.service.photo.url }}" alt="{{ entry.service.name }}">
+          {% else %}
+          <div class="service-entry-placeholder">
+            <span>{{ section.title }}</span>
+          </div>
+          {% endif %}
+        </div>
+        <div class="service-entry-content">
+          <div class="service-entry-top">
+            <h3>{{ entry.service.name }}</h3>
+            {% if entry.service.is_active %}
+            <span class="badge badge-success">Active</span>
+            {% else %}
+            <span class="badge badge-muted">Inactive</span>
+            {% endif %}
+          </div>
+
+          <div class="service-entry-bottom">
+            <div class="service-entry-price">
+              <span class="service-entry-label">Price</span>
+              {% if entry.is_priced %}
+              <strong>UGX {{ entry.service.price|floatformat:0|intcomma }}</strong>
+              {% else %}
+              <strong>Not set yet</strong>
+              {% endif %}
+              {% if entry.service.support_commission_enabled %}
+              <small class="field-note">Support: UGX {{ entry.service.support_commission_amount|floatformat:0|intcomma }}</small>
+              {% endif %}
+            </div>
+            <a class="button button-secondary service-entry-action" data-modal-url="{% url 'services:edit' entry.service.pk %}" href="{% url 'services:edit' entry.service.pk %}">Update</a>
+          </div>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+  </article>
+  {% endfor %}
+</section>
+
+{% if extra_services %}
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <h2>Custom Services</h2>
+      <p>Services you added manually appear here in the same clean layout.</p>
+    </div>
+  </div>
+  <div class="service-card-grid">
+    {% for service in extra_services %}
+    <article class="service-entry-card">
+      <div class="service-entry-media">
+        {% if service.photo %}
+        <img src="{{ service.photo.url }}" alt="{{ service.name }}">
+        {% else %}
+        <div class="service-entry-placeholder">
+          <span>Custom Service</span>
+        </div>
+        {% endif %}
+      </div>
+      <div class="service-entry-content">
+        <div class="service-entry-top">
+          <h3>{{ service.name }}</h3>
+          {% if service.is_active %}
+          <span class="badge badge-success">Active</span>
+          {% else %}
+          <span class="badge badge-muted">Inactive</span>
+          {% endif %}
+        </div>
+        <div class="service-entry-bottom">
+          <div class="service-entry-price">
+            <span class="service-entry-label">Price</span>
+            {% if service.price %}
+            <strong>UGX {{ service.price|floatformat:0|intcomma }}</strong>
+            {% else %}
+            <strong>Not set yet</strong>
+            {% endif %}
+            {% if service.support_commission_enabled %}
+            <small class="field-note">Support: UGX {{ service.support_commission_amount|floatformat:0|intcomma }}</small>
+            {% endif %}
+          </div>
+          <a class="button button-secondary service-entry-action" data-modal-url="{% url 'services:edit' service.pk %}" href="{% url 'services:edit' service.pk %}">Update</a>
+        </div>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+{% endblock %}

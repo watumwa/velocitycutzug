@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Service Stock Usage{% endblock %}
+{% block page_title %}Service Stock Usage{% endblock %}
+
+{% block content %}
+<section class="panel form-panel">
+  <div class="panel-header">
+    <div>
+      <p class="eyebrow">Auto-Usage Recipes</p>
+      <h2>Deduct consumables when services are approved</h2>
+      <p>Example: a hair dye service can consume one dye pack or a measured salon-use product automatically.</p>
+    </div>
+  </div>
+  <form method="post" class="inline-form inline-form-wide">
+    {% csrf_token %}
+    <div class="field compact">
+      <label for="{{ form.service.id_for_label }}">Service</label>
+      {{ form.service }}
+      {% for error in form.service.errors %}<small class="error">{{ error }}</small>{% endfor %}
+    </div>
+    <div class="field compact">
+      <label for="{{ form.product.id_for_label }}">Consumable</label>
+      {{ form.product }}
+      {% for error in form.product.errors %}<small class="error">{{ error }}</small>{% endfor %}
+    </div>
+    <div class="field compact">
+      <label for="{{ form.quantity.id_for_label }}">Quantity used</label>
+      {{ form.quantity }}
+      {% for error in form.quantity.errors %}<small class="error">{{ error }}</small>{% endfor %}
+    </div>
+    <label class="checkbox-row" for="{{ form.is_active.id_for_label }}">
+      {{ form.is_active }}
+      <span>Active</span>
+    </label>
+    <div class="form-actions">
+      <button class="button button-primary" type="submit">Save Recipe</button>
+    </div>
+  </form>
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <p class="eyebrow">Configured Recipes</p>
+      <h2>Current service consumables</h2>
+    </div>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Service</th><th>Product</th><th>Quantity</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        {% for usage in usages %}
+        <tr>
+          <td data-label="Service">{{ usage.service.name }}</td>
+          <td data-label="Product">{{ usage.product.name }}</td>
+          <td data-label="Quantity">{{ usage.quantity|floatformat:2 }} {{ usage.product.unit }}</td>
+          <td data-label="Status">{% if usage.is_active %}<span class="badge badge-success">Active</span>{% else %}<span class="badge badge-muted">Paused</span>{% endif %}</td>
+          <td data-label="Action">
+            <form method="post" action="{% url 'inventory:service_stock_usage_delete' usage.pk %}">
+              {% csrf_token %}
+              <button class="text-link text-danger" type="submit">Remove</button>
+            </form>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5">No service stock usage has been configured yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

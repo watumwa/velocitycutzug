@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Cancel Sale{% endblock %}
+{% block page_title %}Cancel Sale{% endblock %}
+
+{% block content %}
+<section class="panel form-panel">
+  <div class="panel-header">
+    <div>
+      <h2>Confirm Cancellation</h2>
+      <p>This will mark the sale as cancelled and remove it from approved revenue and commission totals.</p>
+    </div>
+  </div>
+  <div class="highlight-card" style="margin-bottom:1rem;">
+    <strong>{{ sale.service_summary }}</strong>
+    <span>Employee: {{ sale.employee_summary }}</span>
+    <span>Amount: UGX {{ sale.amount }}</span>
+    <span>Date: {{ sale.created_at|date:"d M Y H:i" }}</span>
+  </div>
+  <form method="post" class="form-actions">
+    {% csrf_token %}
+    <a class="button button-secondary" href="{% url 'sales:list' %}">Cancel</a>
+    <button class="button button-danger" type="submit">Cancel Sale</button>
+  </form>
+</section>
+{% endblock %}
